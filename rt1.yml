@@ -1,0 +1,26 @@
+name: rt1_env_test
+channels:
+  - conda-forge
+  - symengine/label/dev
+  - defaults
+dependencies:
+  - numpy
+  - scipy
+  - sympy
+  - pandas
+  - python=3.6
+  - python-symengine=0.3.0.84.ga12f736=py36_vc14_0
+  - symengine=0.3.0.270.ga7b1eef4=vc14_3
+  - ipyparallel
+  - cloudpickle
+  - gdal>=2.1.0
+  - lxml
+  - configparser
+  - rasterio
+  - pip
+  - git
+  - pip:
+    - git+https://github.com/TUW-GEO/rt1@dev
+
+
+
