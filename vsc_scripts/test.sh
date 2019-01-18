@@ -19,7 +19,7 @@
 echo "=================================================="
 date
 echo "--------------------------------------------------"
-source /home/lv70533/tle/miniconda3/bin/activate rt1_env_test
+source /eodc/private/tuwgeo/users/tle/programs/miniconda2/bin/activate rt1_env_test_eodc
 python -u /eodc/private/tuwgeo/users/tle/code_new/rt1_s1_processing/rt1_input_loadstackparallel_pj7.py /eodc/private/tuwgeo/users/tle/code_new/rt1_s1_processing/config_pj7.ini -totalarraynumber 5 -arraynumber ${SLURM_ARRAY_TASK_ID}
 echo "--------------------------------------------------"
 date
