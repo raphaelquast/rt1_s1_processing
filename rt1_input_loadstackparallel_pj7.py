@@ -438,45 +438,23 @@ def main(args, test_vsc_param=False):
                        output_dir=out_dir,
                        ndvi_dir=ndvi_dir,
                        orbit_direction=orbit_direction)
-            #TODO: put ndvi_dir, orbit_direction into config file
         else:
             # implement the multiprocessing here
             import multiprocessing as mp
 
-            # ---------------------------
-            # ---------------------------
-
-
-            # create multi
-#            process_list = []
-#            list_to_process_node_chunked = chunkIt(list_to_process_node, mp_threads)
-#            for cr_list in list_to_process_node_chunked:
-#                process_dict = {}
-#                process_dict['sig0_dir'] = sig0_dir
-#                process_dict['plia_dir'] = plia_dir
-#                process_dict['block_size'] = block_size
-#                process_dict['cr_list'] = cr_list
-#                process_dict['output_dir'] = out_dir
-#                process_dict['ndvi_dir'] = ndvi_dir
-#                process_dict['orbit_direction'] = orbit_direction
-#
-#                process_list.append(process_dict)
-            filelist = os.listdir(out_dir)
             process_list = []
-            for cr_list in list_to_process_node:
-                if str(cr_list[0]) + '_' + str(cr_list[1]) + '.dump' in filelist:
-                    continue
-
+            list_to_process_node_chunked = chunkIt(list_to_process_node, mp_threads*20)
+            for cr_list in list_to_process_node_chunked:
                 process_dict = {}
                 process_dict['sig0_dir'] = sig0_dir
                 process_dict['plia_dir'] = plia_dir
                 process_dict['block_size'] = block_size
-                process_dict['cr_list'] = [cr_list]
+                process_dict['cr_list'] = cr_list
                 process_dict['output_dir'] = out_dir
                 process_dict['ndvi_dir'] = ndvi_dir
                 process_dict['orbit_direction'] = orbit_direction
-
                 process_list.append(process_dict)
+
 
             print("start the mp...:", datetime.now())
             print('processing ', len(process_list), 'sites...')
@@ -593,17 +571,17 @@ def parallelfunc(import_dict):
 
 if __name__ == '__main__':
     import sys
-    sys.argv.append(r"E:\USERS\tle\rt1_input_pj7\src\rt1_input\config_pj7.ini")
-    sys.argv.append("-totalarraynumber")
-    sys.argv.append("1")
-    sys.argv.append("-arraynumber")
-    sys.argv.append("1")
+    #sys.argv.append(r"E:\USERS\tle\rt1_input_pj7\src\rt1_input\config_pj7.ini")
+    #sys.argv.append("-totalarraynumber")
+    #sys.argv.append("1")
+    #sys.argv.append("-arraynumber")
+    #sys.argv.append("1")
 
 
     print("Start", datetime.now())
     async_res = main(sys.argv[1:], test_vsc_param=False)
 
-    print('gogogo')
+    #print('gogogo')
     # initialize a stdout0 array for comparison
 
 #    import time as tme
