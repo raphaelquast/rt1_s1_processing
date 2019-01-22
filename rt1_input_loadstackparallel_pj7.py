@@ -593,7 +593,7 @@ def parallelfunc(import_dict):
 
 if __name__ == '__main__':
     import sys
-    sys.argv.append(r"E:\USERS\tle\rt1_input_pj7\src\rt1_input\config_pj7.ini")
+    sys.argv.append(r"D:\USERS\rq\rt1_s1_processing\config_pj7.ini")
     sys.argv.append("-totalarraynumber")
     sys.argv.append("1")
     sys.argv.append("-arraynumber")
