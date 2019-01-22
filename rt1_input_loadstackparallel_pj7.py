@@ -438,45 +438,23 @@ def main(args, test_vsc_param=False):
                        output_dir=out_dir,
                        ndvi_dir=ndvi_dir,
                        orbit_direction=orbit_direction)
-            #TODO: put ndvi_dir, orbit_direction into config file
         else:
             # implement the multiprocessing here
             import multiprocessing as mp
 
-            # ---------------------------
-            # ---------------------------
-
-
-            # create multi
-#            process_list = []
-#            list_to_process_node_chunked = chunkIt(list_to_process_node, mp_threads)
-#            for cr_list in list_to_process_node_chunked:
-#                process_dict = {}
-#                process_dict['sig0_dir'] = sig0_dir
-#                process_dict['plia_dir'] = plia_dir
-#                process_dict['block_size'] = block_size
-#                process_dict['cr_list'] = cr_list
-#                process_dict['output_dir'] = out_dir
-#                process_dict['ndvi_dir'] = ndvi_dir
-#                process_dict['orbit_direction'] = orbit_direction
-#
-#                process_list.append(process_dict)
-            filelist = os.listdir(out_dir)
             process_list = []
-            for cr_list in list_to_process_node:
-                if str(cr_list[0]) + '_' + str(cr_list[1]) + '.dump' in filelist:
-                    continue
-
+            list_to_process_node_chunked = chunkIt(list_to_process_node, mp_threads*20)
+            for cr_list in list_to_process_node_chunked:
                 process_dict = {}
                 process_dict['sig0_dir'] = sig0_dir
                 process_dict['plia_dir'] = plia_dir
                 process_dict['block_size'] = block_size
-                process_dict['cr_list'] = [cr_list]
+                process_dict['cr_list'] = cr_list
                 process_dict['output_dir'] = out_dir
                 process_dict['ndvi_dir'] = ndvi_dir
                 process_dict['orbit_direction'] = orbit_direction
-
                 process_list.append(process_dict)
+
 
             print("start the mp...:", datetime.now())
             print('processing ', len(process_list), 'sites...')
