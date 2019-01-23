@@ -104,6 +104,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
     for line in line_list:
         # don't re-process files that already exist
         # TODO: add here check output function, remove hardcode
+        print('read sig0 and plia stack... line:', line)
         sig0_block = sig_stack.read_ts(0, line * block_size, 10000, block_size)
         plia_block = plia_stack.read_ts(0, line * block_size, 10000, block_size)
         time_sig0_list = sig0_block[0]
@@ -112,6 +113,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
         data_plia_list = plia_block[1]
 
         if ndvi_stack:
+            print('read ndvi stack..., line:', line)
             ndvi_block = ndvi_stack.read_ts(0, line * block_size, 10000, block_size)
             time_ndvi_list = ndvi_block[0]
             data_ndvi_list = ndvi_block[1]
@@ -210,8 +212,8 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             # TODO: pass ndvi df to out_dict
             out_dict = {'dataset': df, 'defdict': defdict_i, '_fnevals_input': None, 'c': px, 'r': line,
                         'outdir': output_dir}
-            print('processed: ', px, line, datetime.now())
-            # parallelfunc(out_dict)
+            # print('processed: ', px, line, datetime.now())
+            parallelfunc(out_dict)
 
 
 def chunkIt(seq, num):
@@ -466,7 +468,11 @@ def parallelfunc(import_dict):
 
     defdict = import_dict['defdict']
     _fnevals_input = import_dict['_fnevals_input']
-    print('processing site', c, r)
+
+    try:
+        print('processing site', c, r, datetime.now())
+    except Exception:
+        pass
 
     from rt1.rtfits import Fits
     '''
