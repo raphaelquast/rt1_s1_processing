@@ -19,11 +19,13 @@ from scipy.signal import savgol_filter
 import multiprocessing as mp
 import shutil
 
+
 def get_worker_id():
     try:
         return str(mp.current_process())[21:30]
     except Exception:
-        return("Non MP")
+        return ("Non MP")
+
 
 def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_dir=None, orbit_direction=''):
     '''
@@ -126,23 +128,31 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             time_ndvi_list = ndvi_block[0]
             data_ndvi_list = ndvi_block[1]
 
-
-        #TODO: remove hard code in here
+        # TODO: remove hard code in here
         for px in range(1000):  # number of pixel per line
-            final_list = []
+            df_px_list = []
             print(get_worker_id(), 'preparing the data for line', line, "px", px, datetime.now())
             for time in time_sig0_list:
                 idx_sig0 = time_sig0_list.index(time)
                 idx_plia = time_plia_list.index(time)
-                # loop over slice
-                for row in range(block_size):
-                    for col in range(px * block_size, (px + 1) * block_size):
-                        sig0_value = data_sig0_list[idx_sig0][row][col]
-                        plia_value = data_plia_list[idx_plia][row][col]
-                        final_list.append([time, sig0_value, plia_value])
+                px_sig0 = data_sig0_list[idx_sig0][:, px * block_size:(px + 1) * block_size]
+                px_plia = data_plia_list[idx_plia][:, px * block_size:(px + 1) * block_size]
 
-            df = pd.DataFrame(final_list)
-            df.columns = ['time', 'sig', 'inc']
+                sig0_plia_stack = np.vstack((px_sig0.flatten(), px_plia.flatten()))
+                df_px = pd.DataFrame(data=sig0_plia_stack.transpose(),
+                                     index=np.full((sig0_plia_stack.shape[1],), time),
+                                     columns=['sig', 'inc'])
+                df_px_list.append(df_px)
+
+                # old stupid way
+                # loop over slice
+                # for row in range(block_size):
+                #     for col in range(px * block_size, (px + 1) * block_size):
+                #         sig0_value = data_sig0_list[idx_sig0][row][col]
+                #         plia_value = data_plia_list[idx_plia][row][col]
+                #         final_list.append([time, sig0_value, plia_value])
+
+            df = pd.concat(df_px_list)
 
             # nan handling
             df = df.replace(-9999, np.nan)
@@ -155,9 +165,6 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
 
             # convert to radian
             df['inc'] = np.deg2rad(df['inc'])
-
-            # set index
-            df = df.set_index('time')
 
             # sort by index
             df.sort_index(inplace=True)
@@ -225,7 +232,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             # print('processed: ', px, line, datetime.now())
             parallelfunc(out_dict)
 
-        #move temp folder into output dir
+        # move temp folder into output dir
         move_tmp_dir(tmp_dir, output_dir)
 
 
@@ -395,8 +402,9 @@ def main(args, test_vsc_param=False):
         for line in range(pixels_per_side):
             list_all_lines.append(line)
 
-    list_to_process_all = chunkIt(list_all_lines, total_arr_number)  #list of 5 lists, each list 200 line (1000/5)
-    list_to_process_this_node = list_to_process_all[arr_number - 1]  # e.g array number 1 will take list_to_process_all[0]
+    list_to_process_all = chunkIt(list_all_lines, total_arr_number)  # list of 5 lists, each list 200 line (1000/5)
+    list_to_process_this_node = list_to_process_all[
+        arr_number - 1]  # e.g array number 1 will take list_to_process_all[0]
 
     if test_vsc_param:
         print('sig0_dir', sig0_dir)
@@ -565,6 +573,7 @@ def make_tmp_dir(line):
         os.makedirs(tmp_dir)
     return tmp_dir
 
+
 def move_tmp_dir(tmp_dir, outdir):
     try:
         shutil.move(tmp_dir, outdir)
@@ -572,14 +581,14 @@ def move_tmp_dir(tmp_dir, outdir):
         print(e)
 
 
-
 if __name__ == '__main__':
     import sys
-    # sys.argv.append("/home/tle/code/new/rt1_s1_processing/config_tle.ini")
-    # sys.argv.append("-totalarraynumber")
-    # sys.argv.append("1")
-    # sys.argv.append("-arraynumber")
-    # sys.argv.append("1")
+
+    sys.argv.append("/home/tle/code/new/rt1_s1_processing/config_tle.ini")
+    sys.argv.append("-totalarraynumber")
+    sys.argv.append("1")
+    sys.argv.append("-arraynumber")
+    sys.argv.append("1")
 
     print("Start", datetime.now())
     main(sys.argv[1:], test_vsc_param=False)
