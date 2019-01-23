@@ -22,9 +22,11 @@ import shutil
 
 def get_worker_id():
     try:
+        if "Main" in str(mp.current_process()):
+            return ("Single thread:")
         return str(mp.current_process())[21:30]
-    except Exception:
-        return ("Non MP")
+    except Exception as e:
+        print(e)
 
 
 def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_dir=None, orbit_direction=''):
@@ -112,7 +114,6 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
     for line in line_list:
         # make temp dir:
         tmp_dir = make_tmp_dir(str(line))
-        # don't re-process files that already exist
         # TODO: add here check output function (probably a blacklist), remove hardcode
         print('read sig0 and plia stack... line:', line, datetime.now())
         sig0_block = sig_stack.read_ts(0, line * block_size, 10000, block_size)
@@ -390,6 +391,7 @@ def main(args, test_vsc_param=False):
     list_all_lines = []
     if test_corner:
         # TODO: make test_corner work again (or probably test line)
+        raise ValueError("test_corner does not work yet")
         pass
     else:
         for line in range(pixels_per_side):
@@ -413,7 +415,7 @@ def main(args, test_vsc_param=False):
         print('len_cr_list (px for this node)', len(list_to_process_this_node))
 
     else:
-        # print("load the stack...:", datetime.now())
+        # single thread processing
         if mp_threads in [0, 1]:
             read_stack_line(sig0_dir=sig0_dir,
                             plia_dir=plia_dir,
@@ -424,7 +426,6 @@ def main(args, test_vsc_param=False):
                             orbit_direction=orbit_direction)
         else:
             # implement the multiprocessing here
-
             process_list = []
             # chunk the line list into smaller lists for processing
             list_to_process_node_chunked = chunkIt(list_to_process_this_node, mp_threads * 2)
@@ -446,14 +447,6 @@ def main(args, test_vsc_param=False):
             pool.map(read_stack_line_mp, process_list)
             pool.close()
 
-            # import ipyparallel as ipp
-            # client = ipp.Client()
-            # dview = client[:]
-            # dview.use_cloudpickle()
-            # balanced_view = client.load_balanced_view()
-
-            # async_res = balanced_view.map_async(read_stack_mp, process_list)
-            # return async_res
 
 
 def read_stack_line_mp(process_dict):
@@ -466,7 +459,6 @@ def read_stack_line_mp(process_dict):
                     orbit_direction=process_dict['orbit_direction'])
 
 
-# -------------------------------------------------
 
 
 def parallelfunc(import_dict):
@@ -577,7 +569,6 @@ def move_tmp_dir(tmp_dir, outdir):
 
 if __name__ == '__main__':
     import sys
-
     # sys.argv.append("/home/tle/code/new/rt1_s1_processing/config_tle.ini")
     # sys.argv.append("-totalarraynumber")
     # sys.argv.append("1")
