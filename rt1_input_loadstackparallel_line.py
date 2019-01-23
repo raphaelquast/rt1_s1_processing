@@ -17,6 +17,7 @@ from rt1_processing_funcs_juhuu import inpdata_inc_average
 import random, string
 from scipy.signal import savgol_filter
 import multiprocessing as mp
+import shutil
 
 
 def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_dir=None, orbit_direction=''):
@@ -102,6 +103,8 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
         pass
 
     for line in line_list:
+        # make temp dir:
+        tmp_dir = make_tmp_dir(str(line))
         # don't re-process files that already exist
         # TODO: add here check output function (probably a blacklist), remove hardcode
         print('read sig0 and plia stack... line:', line)
@@ -120,6 +123,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
 
 
         final_list = []
+        #TODO: remove hard code in here
         for px in range(1000):  # number of pixel per line
             for time in time_sig0_list:
                 idx_sig0 = time_sig0_list.index(time)
@@ -211,9 +215,12 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
 
             # TODO: pass ndvi df to out_dict
             out_dict = {'dataset': df, 'defdict': defdict_i, '_fnevals_input': None, 'c': px, 'r': line,
-                        'outdir': output_dir}
+                        'outdir': tmp_dir}
             # print('processed: ', px, line, datetime.now())
             parallelfunc(out_dict)
+
+        #move temp folder into output dir
+        move_tmp_dir(tmp_dir, output_dir)
 
 
 def chunkIt(seq, num):
@@ -540,6 +547,20 @@ def parallelfunc(import_dict):
     with open(os.path.join(outdir, str(c) + '_' + str(r) + '.dump'), 'wb') as file:
         cloudpickle.dump(fit, file)
         # return fit
+
+
+def make_tmp_dir(line):
+    tmp_dir = os.path.join(os.environ["TMPDIR"], line)
+    if not os.path.exists(tmp_dir):
+        os.makedirs(tmp_dir)
+    return tmp_dir
+
+def move_tmp_dir(tmp_dir, outdir):
+    try:
+        shutil.move(tmp_dir, outdir)
+    except Exception as e:
+        print(e)
+
 
 
 if __name__ == '__main__':
