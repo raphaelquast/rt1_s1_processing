@@ -174,7 +174,6 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             # -----------------------------------------
 
             if ndvi_stack:
-                # TODO: read ndvi
                 ndvi_list = []
                 for time in time_ndvi_list:
                     idx_ndvi = time_ndvi_list.index(time)
@@ -221,8 +220,6 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                 'frac': [True, 0.5, None, ([0.01], [1.])],
                 'omega': [True, 0.3, None, ([0.05], [0.6])],
             }
-
-            # TODO: pass ndvi df to out_dict
             out_dict = {'dataset': df, 'defdict': defdict_i, '_fnevals_input': None, 'c': px, 'r': line,
                         'outdir': tmp_dir}
             # print('processed: ', px, line, datetime.now())
@@ -572,7 +569,8 @@ def make_tmp_dir(line):
 
 def move_tmp_dir(tmp_dir, outdir):
     try:
-        shutil.move(tmp_dir, outdir)
+        shutil.copy(tmp_dir, outdir)
+        shutil.rmtree(tmp_dir)
     except Exception as e:
         print(e)
 
