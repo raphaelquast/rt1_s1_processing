@@ -355,7 +355,7 @@ def main(args, test_vsc_param=False):
     -------
 
     '''
-    from rt1_input_loadstackparallel_pj7 import read_stack, read_stack_mp
+    from rt1_input_pj7 import read_stack, read_stack_mp
 
     args = parse_args(args)
     cfg = read_cfg(args.cfg_file)
