@@ -4,6 +4,7 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['NUMEXPR_NUM_THREADS'] = '1'
+
 import cloudpickle
 
 from ImageStack import create_imagestack_dataset
@@ -16,7 +17,6 @@ import copy
 from rt1_processing_funcs_juhuu import inpdata_inc_average
 import random, string
 from scipy.signal import savgol_filter
-
 
 
 def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=None, orbit_direction=''):
@@ -101,7 +101,6 @@ def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=Non
         if ndvi_dir:
             ndvi_stack = create_imagestack_dataset(name=random_name + 'ndvi', filelist=filelist_ndvi, times=times_ndvi,
                                                nodata=-9999)
-
         # read sig0 to virtual stack
         sig_stack = create_imagestack_dataset(name=random_name + 'SIG', filelist=filelist_sig0, times=times_sig0,
                                       nodata=-9999)
@@ -227,10 +226,12 @@ def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=Non
         defdict_i = {
                     'bsf'   : [False, 0.01, None,  ([0.01], [.25])],
                     'v'     : [False, 0.4, None, ([0.01], [.4])],
-                    'v2'    : [True, 1., None, ([0.5], [1.5])],
-                    'VOD'   : [False, VOD_input.values.flatten()],
-                    'SM'    : [True, 0.25,  'D',   ([0.05], [0.5])],
+                    #'v2'    : [True, 1., None, ([0.5], [1.5])],
+                    'v2'    : [True, 1., None, ([0.1], [1.5])],
+                    #'VOD'   : [False, VOD_input.values.flatten()],
                     #'VOD'   : [True, 0.25,'30D', ([0.01], [1.])],
+                    'VOD'   : [False,  ((VOD_input - VOD_input.min())/(VOD_input - VOD_input.min()).max()).values.flatten()],
+                    'SM'    : [True, 0.25,  'D',   ([0.05], [0.5])],
                     'frac'  : [True, 0.5, None,  ([0.01], [1.])],
                     'omega' : [True, 0.3,  None,  ([0.05], [0.6])],
                     }
