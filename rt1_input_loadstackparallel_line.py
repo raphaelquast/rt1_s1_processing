@@ -470,7 +470,7 @@ def parallelfunc(import_dict):
     _fnevals_input = import_dict['_fnevals_input']
 
     try:
-        print('processing site C: ', c, 'R: ', r, datetime.now())
+        print('processing site C:', c, ' R:', r, 'time:', datetime.now())
     except Exception:
         pass
 
