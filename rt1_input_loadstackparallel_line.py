@@ -412,7 +412,8 @@ def main(args, test_vsc_param=False):
             # implement the multiprocessing here
 
             process_list = []
-            list_to_process_node_chunked = chunkIt(list_to_process_node, mp_threads * 20)
+            # chunk the line list into smaller lists for processing
+            list_to_process_node_chunked = chunkIt(list_to_process_node, mp_threads * 2)
             for cr_list in list_to_process_node_chunked:
                 process_dict = {}
                 process_dict['sig0_dir'] = sig0_dir
