@@ -127,9 +127,9 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             data_ndvi_list = ndvi_block[1]
 
 
-        final_list = []
         #TODO: remove hard code in here
         for px in range(1000):  # number of pixel per line
+            final_list = []
             print(get_worker_id(), 'preparing the data for line', line, "px", px, datetime.now())
             for time in time_sig0_list:
                 idx_sig0 = time_sig0_list.index(time)
