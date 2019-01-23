@@ -550,7 +550,10 @@ def parallelfunc(import_dict):
 
 
 def make_tmp_dir(line):
-    tmp_dir = os.path.join(os.environ["TMPDIR"], line)
+    if 'TMPDIR' in os.environ:
+        tmp_dir = os.path.join(os.environ["TMPDIR"], line)
+    else:
+        tmp_dir = os.path.join('/tmp', line)
     if not os.path.exists(tmp_dir):
         os.makedirs(tmp_dir)
     return tmp_dir
