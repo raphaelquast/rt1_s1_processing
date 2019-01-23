@@ -103,7 +103,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                                            nodata=-9999)
     # read sig and plia blocks
     try:
-        print(get_worker_id(), line_list)
+        print(get_worker_id(), line_list, datetime.now())
     except Exception:
         pass
 
@@ -112,7 +112,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
         tmp_dir = make_tmp_dir(str(line))
         # don't re-process files that already exist
         # TODO: add here check output function (probably a blacklist), remove hardcode
-        print('read sig0 and plia stack... line:', line)
+        print('read sig0 and plia stack... line:', line, datetime.now())
         sig0_block = sig_stack.read_ts(0, line * block_size, 10000, block_size)
         plia_block = plia_stack.read_ts(0, line * block_size, 10000, block_size)
         time_sig0_list = sig0_block[0]
@@ -121,7 +121,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
         data_plia_list = plia_block[1]
 
         if ndvi_stack:
-            print('read ndvi stack..., line:', line)
+            print('read ndvi stack..., line:', line, datetime.now())
             ndvi_block = ndvi_stack.read_ts(0, line * block_size, 10000, block_size)
             time_ndvi_list = ndvi_block[0]
             data_ndvi_list = ndvi_block[1]
@@ -130,6 +130,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
         final_list = []
         #TODO: remove hard code in here
         for px in range(1000):  # number of pixel per line
+            print(get_worker_id(), 'preparing the data for line', line, "px", px, datetime.now())
             for time in time_sig0_list:
                 idx_sig0 = time_sig0_list.index(time)
                 idx_plia = time_plia_list.index(time)
@@ -552,6 +553,7 @@ def parallelfunc(import_dict):
     with open(os.path.join(outdir, str(c) + '_' + str(r) + '.dump'), 'wb') as file:
         cloudpickle.dump(fit, file)
         # return fit
+    print(get_worker_id(), "processing done", 'C:', c, ' R:', r, 'time:', datetime.now())
 
 
 def make_tmp_dir(line):
