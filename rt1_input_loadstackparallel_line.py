@@ -19,6 +19,11 @@ from scipy.signal import savgol_filter
 import multiprocessing as mp
 import shutil
 
+def get_worker_id():
+    try:
+        return str(mp.current_process())[21:30]
+    except Exception:
+        return("Non MP")
 
 def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_dir=None, orbit_direction=''):
     '''
@@ -98,7 +103,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                                            nodata=-9999)
     # read sig and plia blocks
     try:
-        print(str(mp.current_process())[21:30], line_list)
+        print(get_worker_id(), line_list)
     except Exception:
         pass
 
@@ -479,7 +484,7 @@ def parallelfunc(import_dict):
     _fnevals_input = import_dict['_fnevals_input']
 
     try:
-        print('processing site C:', c, ' R:', r, 'time:', datetime.now())
+        print(get_worker_id(), 'processing site C:', c, ' R:', r, 'time:', datetime.now())
     except Exception:
         pass
 
