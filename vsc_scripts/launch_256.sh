@@ -6,12 +6,12 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks-per-core=1
 #SBATCH --array=1-5
-#SBATCH --time 00:10:00
+#SBATCH --time 71:59:00
 #SBATCH --licenses="gpfs@eodc"
-#SBATCH --qos=devel_0128
-####SBATCH --qos=normal_0256
-#SBATCH --partition=mem_0128
-####SBATCH --partition=mem_0256
+####SBATCH --qos=devel_0128
+#SBATCH --qos=normal_0256
+####SBATCH --partition=mem_0128
+#SBATCH --partition=mem_0256
 ##########SBATCH --mail-type=BEGIN    # first have to state the type of event to occur
 ##########SBATCH --mail-user=<email@address.at>   # and then your email address
 
