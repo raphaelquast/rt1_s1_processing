@@ -382,8 +382,8 @@ def main(args, test_vsc_param=False):
         for line in range(pixels_per_side):
             list_all_lines.append(line)
 
-    list_to_process_all = chunkIt(list_all_lines, total_arr_number)
-    list_to_process_node = list_to_process_all[arr_number - 1]  # e.g array number 1 will take list_to_process_all[0]
+    list_to_process_all = chunkIt(list_all_lines, total_arr_number)  #list of 5 lists, each list 200 line (1000/5)
+    list_to_process_this_node = list_to_process_all[arr_number - 1]  # e.g array number 1 will take list_to_process_all[0]
 
     if test_vsc_param:
         print('sig0_dir', sig0_dir)
@@ -396,7 +396,7 @@ def main(args, test_vsc_param=False):
         print('number of cr_list (must equal arraytotalnumber)', len(list_to_process_all))
         print('totalarraynumber', total_arr_number)
         print('arraynumber', arr_number)
-        print('len_cr_list (px for this node)', len(list_to_process_node))
+        print('len_cr_list (px for this node)', len(list_to_process_this_node))
 
     else:
         # print("load the stack...:", datetime.now())
@@ -404,7 +404,7 @@ def main(args, test_vsc_param=False):
             read_stack_line(sig0_dir=sig0_dir,
                             plia_dir=plia_dir,
                             block_size=block_size,
-                            line_list=list_to_process_node,
+                            line_list=list_to_process_this_node,
                             output_dir=out_dir,
                             ndvi_dir=ndvi_dir,
                             orbit_direction=orbit_direction)
@@ -413,7 +413,7 @@ def main(args, test_vsc_param=False):
 
             process_list = []
             # chunk the line list into smaller lists for processing
-            list_to_process_node_chunked = chunkIt(list_to_process_node, mp_threads * 2)
+            list_to_process_node_chunked = chunkIt(list_to_process_this_node, mp_threads * 2)
             for cr_list in list_to_process_node_chunked:
                 process_dict = {}
                 process_dict['sig0_dir'] = sig0_dir
@@ -426,7 +426,8 @@ def main(args, test_vsc_param=False):
                 process_list.append(process_dict)
 
             print("start the mp...:", datetime.now())
-            print('processing ', len(process_list), 'lists...')
+            print('each computing node is processing ', len(process_list), 'lists...')
+            print('each list has about ', len(list_to_process_node_chunked[0]), 'lines...')
             pool = mp.Pool(mp_threads)
             pool.map(read_stack_line_mp, process_list)
             pool.close()
