@@ -103,7 +103,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
 
     for line in line_list:
         # don't re-process files that already exist
-        # TODO: add here check output function, remove hardcode
+        # TODO: add here check output function (probably a blacklist), remove hardcode
         print('read sig0 and plia stack... line:', line)
         sig0_block = sig_stack.read_ts(0, line * block_size, 10000, block_size)
         plia_block = plia_stack.read_ts(0, line * block_size, 10000, block_size)
@@ -185,7 +185,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                 df_ndvi.sort_index(inplace=True)
 
             # ------------------------ RQ's manipulation
-            # TODO: what if we don't have ndvi?
+            # TODO: add a condition to work without NDVI
             VOD_input = df_ndvi.resample('D').interpolate(method='nearest')
             # get a smooth curve
             # VOD_input = VOD_input.rolling(window=60, center=True, min_periods=1).mean()
@@ -376,7 +376,7 @@ def main(args, test_vsc_param=False):
     # prepare corner list
     list_all_lines = []
     if test_corner:
-        # TODO: test line
+        # TODO: make test_corner work again (or probably test line)
         pass
     else:
         for line in range(pixels_per_side):
