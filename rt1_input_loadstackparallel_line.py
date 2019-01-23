@@ -580,11 +580,11 @@ def move_tmp_dir(tmp_dir, outdir):
 if __name__ == '__main__':
     import sys
 
-    sys.argv.append("/home/tle/code/new/rt1_s1_processing/config_tle.ini")
-    sys.argv.append("-totalarraynumber")
-    sys.argv.append("1")
-    sys.argv.append("-arraynumber")
-    sys.argv.append("1")
+    # sys.argv.append("/home/tle/code/new/rt1_s1_processing/config_tle.ini")
+    # sys.argv.append("-totalarraynumber")
+    # sys.argv.append("1")
+    # sys.argv.append("-arraynumber")
+    # sys.argv.append("1")
 
     print("Start", datetime.now())
     main(sys.argv[1:], test_vsc_param=False)
