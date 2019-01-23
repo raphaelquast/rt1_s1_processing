@@ -103,18 +103,12 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
         tmp_dir = make_tmp_dir(str(line))
         # TODO: add here check output function (probably a blacklist), remove hardcode
         print('read sig0 and plia stack... line:', line, datetime.now())
-        sig0_block = sig_stack.read_ts(0, line * block_size, 10000, block_size)
-        plia_block = plia_stack.read_ts(0, line * block_size, 10000, block_size)
-        time_sig0_list = sig0_block[0]
-        data_sig0_list = sig0_block[1]
-        time_plia_list = plia_block[0]
-        data_plia_list = plia_block[1]
+        time_sig0_list, data_sig0_list = sig_stack.read_ts(0, line * block_size, 10000, block_size)
+        time_plia_list, data_plia_list = plia_stack.read_ts(0, line * block_size, 10000, block_size)
 
         if ndvi_stack:
             print('read ndvi stack..., line:', line, datetime.now())
-            ndvi_block = ndvi_stack.read_ts(0, line * block_size, 10000, block_size)
-            time_ndvi_list = ndvi_block[0]
-            data_ndvi_list = ndvi_block[1]
+            time_ndvi_list, data_ndvi_list = ndvi_stack.read_ts(0, line * block_size, 10000, block_size)
 
         # TODO: remove hard code in here
         for px in range(1000):  # number of pixel per line

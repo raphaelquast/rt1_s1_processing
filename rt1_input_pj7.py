@@ -101,12 +101,8 @@ def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=Non
         plia_stack = create_imagestack_dataset(name=random_name + 'LIA', filelist=filelist_plia, times=times_plia,
                                                nodata=-9999)
 
-        sig0_block = sig_stack.read_ts(c * block_size, r * block_size, block_size, block_size)
-        plia_block = plia_stack.read_ts(c * block_size, r * block_size, block_size, block_size)
-        time_sig0_list = sig0_block[0]
-        data_sig0_list = sig0_block[1]
-        time_plia_list = plia_block[0]
-        data_plia_list = plia_block[1]
+        time_sig0_list, data_sig0_list = sig_stack.read_ts(c * block_size, r * block_size, block_size, block_size)
+        time_plia_list, data_plia_list = plia_stack.read_ts(c * block_size, r * block_size, block_size, block_size)
         final_list = []
         for time in time_sig0_list:
             idx_sig0 = time_sig0_list.index(time)
@@ -144,11 +140,8 @@ def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=Non
         # -----------------------------------------
 
         if ndvi_stack:
-            ndvi_block = ndvi_stack.read_ts(c * block_size, r * block_size, block_size, block_size)
-            time_ndvi_list = ndvi_block[0]
-            data_ndvi_list = ndvi_block[1]
+            time_ndvi_list, data_ndvi_list = ndvi_stack.read_ts(c * block_size, r * block_size, block_size, block_size)
             ndvi_list = []
-
             for time in time_ndvi_list:
                 idx_ndvi = time_ndvi_list.index(time)
                 ndvi_list.append([time, np.mean(data_ndvi_list[idx_ndvi])])
