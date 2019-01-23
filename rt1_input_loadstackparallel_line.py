@@ -97,7 +97,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                                            nodata=-9999)
     # read sig and plia blocks
     try:
-        print(str(mp.current_process())[20:28], line_list)
+        print(str(mp.current_process())[21:30], line_list)
     except Exception:
         pass
 
@@ -536,12 +536,11 @@ def parallelfunc(import_dict):
 
 if __name__ == '__main__':
     import sys
-
-    sys.argv.append("/home/tle/code/new/rt1_s1_processing/config_pj7.ini")
-    sys.argv.append("-totalarraynumber")
-    sys.argv.append("1")
-    sys.argv.append("-arraynumber")
-    sys.argv.append("1")
+    # sys.argv.append("/home/tle/code/new/rt1_s1_processing/config_tle.ini")
+    # sys.argv.append("-totalarraynumber")
+    # sys.argv.append("1")
+    # sys.argv.append("-arraynumber")
+    # sys.argv.append("1")
 
     print("Start", datetime.now())
     main(sys.argv[1:], test_vsc_param=False)
