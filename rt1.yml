@@ -1,4 +1,4 @@
-name: rt1_env_test
+name: rt1_env_test_eodc
 channels:
   - conda-forge
   - symengine/label/dev
@@ -9,8 +9,8 @@ dependencies:
   - sympy
   - pandas
   - python=3.6
-  - python-symengine=0.3.0.84.ga12f736=py36_vc14_0
-  - symengine=0.3.0.270.ga7b1eef4=vc14_3
+  #- python-symengine=0.3.0.84.ga12f736=py36_vc14_0
+  #- symengine=0.3.0.270.ga7b1eef4=vc14_3
   - ipyparallel
   - cloudpickle
   - gdal>=2.1.0
