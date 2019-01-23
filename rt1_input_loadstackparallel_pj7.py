@@ -160,11 +160,7 @@ def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=Non
 
             for time in time_ndvi_list:
                 idx_ndvi = time_ndvi_list.index(time)
-                # loop over slice
-                for row in range(block_size):
-                    for col in range(block_size):
-                        ndvi_value = data_ndvi_list[idx_ndvi][row][col]
-                ndvi_list.append([time, np.mean(ndvi_value)])
+                ndvi_list.append([time, np.mean(data_ndvi_list[idx_ndvi])])
 
             df_ndvi = pd.DataFrame(ndvi_list)
             df_ndvi.columns = ['time', 'ndvi']
