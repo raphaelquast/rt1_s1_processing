@@ -61,10 +61,14 @@ def move_dir(tmp_dir, outdir):
 
     '''
     try:
-        copytree(tmp_dir, os.path.join(outdir, os.path.basename(tmp_dir)))
+        out_path = os.path.join(outdir, os.path.basename(tmp_dir))
+        if not os.path.exists(out_path):
+            os.makedirs(out_path)
+        copytree(tmp_dir, out_path)
         shutil.rmtree(tmp_dir)
     except Exception as e:
         print(e)
+
 
 def copytree(src, dst, symlinks=False, ignore=None):
     for item in os.listdir(src):
@@ -197,6 +201,7 @@ def get_processed_list(out_dir):
         processed_dump += [fil.replace('.dump', '') for fil in files if fil.endswith(".dump")]
     return processed_dump
 
+
 def get_str_occ(list, str):
     '''
     get string occurences in list of strings
@@ -247,19 +252,18 @@ def parallelfunc(import_dict):
         # manual_dyn_df = pd.DataFrame(dataset.index.month.values.flatten(),
         #                              dataset.index, columns=['VOD'])
         defdict = {
-                    'bsf'   : [False, 0.01, None,  ([0.01], [.25])],
-                    'v'     : [False, 0.4, None, ([0.01], [.4])],
-                    #'v2'    : [True, 1., None, ([0.5], [1.5])],
-                    'v2'    : [True, 1., None, ([0.1], [1.5])],
-                    #'VOD'   : [False, VOD_input.values.flatten()],
-                    #'VOD'   : [True, 0.25,'30D', ([0.01], [1.])],
-                    'VOD'   : [False,  ((VOD_input - VOD_input.min())/(VOD_input - VOD_input.min()).max()).values.flatten()],
-                    #'SM'    : [True, 0.25,  'D',   ([0.05], [0.5])],
-                    'SM'    : [True, 0.1,  'D',   ([0.01], [0.2])],
-                    'frac'  : [True, 0.5, None,  ([0.01], [1.])],
-                    'omega' : [True, 0.3,  None,  ([0.05], [0.6])],
-                    }
-
+            'bsf': [False, 0.01, None, ([0.01], [.25])],
+            'v': [False, 0.4, None, ([0.01], [.4])],
+            # 'v2'    : [True, 1., None, ([0.5], [1.5])],
+            'v2': [True, 1., None, ([0.1], [1.5])],
+            # 'VOD'   : [False, VOD_input.values.flatten()],
+            # 'VOD'   : [True, 0.25,'30D', ([0.01], [1.])],
+            'VOD': [False, ((VOD_input - VOD_input.min()) / (VOD_input - VOD_input.min()).max()).values.flatten()],
+            # 'SM'    : [True, 0.25,  'D',   ([0.05], [0.5])],
+            'SM': [True, 0.1, 'D', ([0.01], [0.2])],
+            'frac': [True, 0.5, None, ([0.01], [1.])],
+            'omega': [True, 0.3, None, ([0.05], [0.6])],
+        }
 
     _fnevals_input = import_dict['_fnevals_input']
 
@@ -311,6 +315,7 @@ def parallelfunc(import_dict):
     with open(os.path.join(outdir, str(c) + '_' + str(r) + '.dump'), 'wb') as file:
         cloudpickle.dump(fit, file)
         # return fit
+
 
 if __name__ == '__main__':
     # print(get_processed_list('/tmp'))
