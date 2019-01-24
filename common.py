@@ -189,6 +189,9 @@ def get_processed_list(out_dir):
         processed_dump += [fil.replace('.dump', '') for fil in files if fil.endswith(".dump")]
     return processed_dump
 
+def get_str_occ(list, str):
+    return sum(str in s for s in list)
+
 
 def parallelfunc(import_dict):
     import os
@@ -275,3 +278,7 @@ def parallelfunc(import_dict):
     with open(os.path.join(outdir, str(c) + '_' + str(r) + '.dump'), 'wb') as file:
         cloudpickle.dump(fit, file)
         # return fit
+
+if __name__ == '__main__':
+    # print(get_processed_list('/tmp'))
+    pass
