@@ -152,13 +152,48 @@ def parallelfunc(import_dict):
     os.environ['OMP_NUM_THREADS'] = '1'
     os.environ['NUMEXPR_NUM_THREADS'] = '1'
 
+    from scipy.signal import savgol_filter
+
     c = import_dict['c']
     r = import_dict['r']
     outdir = import_dict['outdir']
-    dataset = copy.deepcopy(import_dict['dataset'])
+
+    # get the sig0 dataset
+    dataset = import_dict['dataset']
+    # convert it to linear units
     dataset['sig'] = 10 ** (dataset['sig'] / 10.)
 
-    defdict = import_dict['defdict']
+    df_ndvi = import_dict['df_ndvi']
+    # transform ndvi dataset if available
+    if df_ndvi is not None:
+        VOD_input = df_ndvi.resample('D').interpolate(method='nearest')
+        # get a smooth curve
+        # VOD_input = VOD_input.rolling(window=60, center=True, min_periods=1).mean()
+        VOD_input = VOD_input.clip_lower(0).apply(savgol_filter, window_length=61, polyorder=2).clip_lower(0)
+        # reindex to input-dataset
+        VOD_input = VOD_input.reindex(dataset.index.drop_duplicates()).dropna()
+        # ensure that there are no ngative-values appearing (possible due to rolling-mean and interpolation)
+        VOD_input = VOD_input.clip_lower(0)
+        # drop all measurements where no VOD estimates are available
+        dataset = dataset.loc[VOD_input.dropna().index]
+
+        # manual_dyn_df = pd.DataFrame(dataset.index.month.values.flatten(),
+        #                              dataset.index, columns=['VOD'])
+        defdict = {
+                    'bsf'   : [False, 0.01, None,  ([0.01], [.25])],
+                    'v'     : [False, 0.4, None, ([0.01], [.4])],
+                    #'v2'    : [True, 1., None, ([0.5], [1.5])],
+                    'v2'    : [True, 1., None, ([0.1], [1.5])],
+                    #'VOD'   : [False, VOD_input.values.flatten()],
+                    #'VOD'   : [True, 0.25,'30D', ([0.01], [1.])],
+                    'VOD'   : [False,  ((VOD_input - VOD_input.min())/(VOD_input - VOD_input.min()).max()).values.flatten()],
+                    #'SM'    : [True, 0.25,  'D',   ([0.05], [0.5])],
+                    'SM'    : [True, 0.1,  'D',   ([0.01], [0.2])],
+                    'frac'  : [True, 0.5, None,  ([0.01], [1.])],
+                    'omega' : [True, 0.3,  None,  ([0.05], [0.6])],
+                    }
+
+
     _fnevals_input = import_dict['_fnevals_input']
 
     try:
@@ -167,27 +202,6 @@ def parallelfunc(import_dict):
         pass
 
     from rt1.rtfits import Fits
-    '''
-    def set_V_SRF(isopart, alpha, v1, v2, v_forward, v_bounceoff, VOD,
-                  omega, tt, s1, s2, aa, SM, **kwargs):
-        from rt1.volume import LinCombV, HenyeyGreenstein
-        from rt1.surface import HG_nadirnorm
-
-        V = LinCombV(Vchoices=
-                     [[isopart,
-                       HenyeyGreenstein(t=0.001, ncoefs=3)],
-                      [(1. - isopart) * (1. - alpha),
-                       HenyeyGreenstein(t=v_forward, ncoefs=8)],
-                      [(1. - isopart) * alpha,
-                       HenyeyGreenstein(t=-v_bounceoff, ncoefs=8, a=[1., 1., 1.])]
-                      ],
-                     tau=v1 + v2 * VOD,
-                     omega=omega)
-
-        SRF = HG_nadirnorm(t=tt, ncoefs=10, a=[aa, 1., 1.],
-                           NormBRDF=s1 + s2 * SM)
-        return V, SRF
-    '''
 
     def set_V_SRF(frac, omega, SM, VOD, v, v2, **kwargs):
         from rt1.volume import HenyeyGreenstein
