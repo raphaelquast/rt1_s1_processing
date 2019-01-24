@@ -11,10 +11,16 @@ import shutil
 import copy
 import cloudpickle
 from datetime import datetime
-
+import tempfile
 
 
 def get_worker_id():
+    '''
+    return multiprocessing worker ID
+    Returns
+    -------
+
+    '''
     try:
         if "Main" in str(mp.current_process()):
             return ("Single thread:")
@@ -23,17 +29,38 @@ def get_worker_id():
         print(e)
 
 
-def make_tmp_dir(line):
+def make_tmp_dir(sub_folder_name):
+    '''
+    make a child folder in tempdir of the current machine
+    Parameters
+    ----------
+    sub_folder_name: str
+
+    Returns
+    -------
+
+    '''
     if 'TMPDIR' in os.environ:
-        tmp_dir = os.path.join(os.environ["TMPDIR"], line)
+        tmp_dir = os.path.join(os.environ["TMPDIR"], sub_folder_name)
     else:
-        tmp_dir = os.path.join('/tmp', line)
+        tmp_dir = os.path.join(tempfile.gettempdir(), sub_folder_name)
     if not os.path.exists(tmp_dir):
         os.makedirs(tmp_dir)
     return tmp_dir
 
 
-def move_tmp_dir(tmp_dir, outdir):
+def move_dir(tmp_dir, outdir):
+    '''
+    Move a target folder to destination folder, overwrite the destination folder
+    Parameters
+    ----------
+    tmp_dir
+    outdir
+
+    Returns
+    -------
+
+    '''
     try:
         shutil.copy(tmp_dir, outdir)
         shutil.rmtree(tmp_dir)
@@ -145,6 +172,27 @@ def read_cfg(cfg_file, include_default=True):
     return ds
 
 
+def get_processed_list(out_dir):
+    '''
+    return the list of existing dump files without the extension (in out_dir)
+    Parameters
+    ----------
+    out_dir
+
+    Returns
+    -------
+
+    '''
+    # traverse root directory, and list directories as dirs and files as files
+    processed_dump = []
+    for root, dirs, files in os.walk(out_dir):
+        processed_dump += [fil.replace('.dump', '') for fil in files if fil.endswith(".dump")]
+    return processed_dump
+
+def get_str_occ(list, str):
+    return sum(str in s for s in list)
+
+
 def parallelfunc(import_dict):
     import os
     os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -244,4 +292,7 @@ def parallelfunc(import_dict):
     with open(os.path.join(outdir, str(c) + '_' + str(r) + '.dump'), 'wb') as file:
         cloudpickle.dump(fit, file)
         # return fit
-    print(get_worker_id(), "processing done", 'C:', c, ' R:', r, 'time:', datetime.now())
+
+if __name__ == '__main__':
+    # print(get_processed_list('/tmp'))
+    pass
