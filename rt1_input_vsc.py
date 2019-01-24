@@ -11,7 +11,6 @@ import pandas as pd
 import numpy as np
 from rt1_processing_funcs_juhuu import inpdata_inc_average
 import random, string
-from scipy.signal import savgol_filter
 import multiprocessing as mp
 from common import get_worker_id, move_dir, make_tmp_dir, chunkIt, parse_args, read_cfg, parallelfunc
 from common import get_processed_list, get_str_occ
@@ -188,7 +187,6 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             out_dict = {'dataset': df, 'df_ndvi': df_ndvi, '_fnevals_input': None,
                         'c': col, 'r': row, 'outdir': tmp_dir}
 
-            # print('processed: ', px, line, datetime.now())
             parallelfunc(out_dict)
 
         # move temp folder into output dir
