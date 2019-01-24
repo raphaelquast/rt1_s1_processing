@@ -354,7 +354,7 @@ def read_stack_line_mp(process_dict):
 if __name__ == '__main__':
     import sys
 
-    # comment those line if you're working on the vsc
+    # # comment those line if you're working on the vsc
     # sys.argv.append("config/config_tle.ini")
     # sys.argv.append("-totalarraynumber")
     # sys.argv.append("2")
