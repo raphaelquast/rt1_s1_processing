@@ -112,10 +112,11 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
         for col in range(1000):  # number of pixel per line
             # if the [col_row] is processed already, continue
             if str(col) + '_' + str(row) in processed:
+                print(str(col) + '_' + str(row) + 'is processed')
                 continue
 
             df_px_list = []
-            print(get_worker_id(), 'preparing the data for line', row, "px", col, datetime.now())
+            print(get_worker_id(), 'preparing the data for col', col,  'row', row, datetime.now())
             for time in time_sig0_list:
                 idx_sig0 = time_sig0_list.index(time)
                 idx_plia = time_plia_list.index(time)
