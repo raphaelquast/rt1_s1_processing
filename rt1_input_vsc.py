@@ -204,8 +204,10 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             }
             out_dict = {'dataset': df, 'defdict': defdict_i, '_fnevals_input': None, 'c': px, 'r': line,
                         'outdir': tmp_dir}
-            # print('processed: ', px, line, datetime.now())
-            parallelfunc(out_dict)
+            try:
+                parallelfunc(out_dict)
+            except Exception as e:
+                print(e)
 
         # move temp folder into output dir
         move_tmp_dir(tmp_dir, output_dir)
