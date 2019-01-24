@@ -93,21 +93,17 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
     plia_stack = create_imagestack_dataset(name=random_name + 'LIA', filelist=filelist_plia, times=times_plia,
                                            nodata=-9999)
     # read sig and plia blocks
-    try:
-        print(get_worker_id(), line_list, datetime.now())
-    except Exception:
-        pass
 
     for line in line_list:
         # make temp dir:
         tmp_dir = make_tmp_dir(str(line))
         # TODO: add here check output function (probably a blacklist), remove hardcode
-        print('read sig0 and plia stack... line:', line, datetime.now())
+        print(get_worker_id(), 'read sig0 and plia stack... line:', line, datetime.now())
         time_sig0_list, data_sig0_list = sig_stack.read_ts(0, line * block_size, 10000, block_size)
         time_plia_list, data_plia_list = plia_stack.read_ts(0, line * block_size, 10000, block_size)
 
         if ndvi_stack:
-            print('read ndvi stack..., line:', line, datetime.now())
+            print(get_worker_id(), 'read ndvi stack..., line:', line, datetime.now())
             time_ndvi_list, data_ndvi_list = ndvi_stack.read_ts(0, line * block_size, 10000, block_size)
 
         # TODO: remove hard code in here
