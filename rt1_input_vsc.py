@@ -14,9 +14,11 @@ import random, string
 from scipy.signal import savgol_filter
 import multiprocessing as mp
 from common import get_worker_id, move_dir, make_tmp_dir, chunkIt, parse_args, read_cfg, parallelfunc
+from common import get_processed_list, get_str_occ
 
 
-def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_dir=None, orbit_direction=''):
+def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_dir=None, orbit_direction='',
+                    processed=[]):
     '''
     Read sig0 and plia rasters stack into a virtual raster stack, then read the time-series block-by block
     Parameters
@@ -262,7 +264,10 @@ def main(args, test_vsc_param=False):
 
     pixels_per_side = int(tif_size / block_size)
 
-    # prepare corner list
+    # get processed files:
+    processed = get_processed_list(out_dir)
+
+    # prepare lines list
     list_all_lines = []
     if test_corner:
         # TODO: make test_corner work again (or probably test line)
@@ -270,12 +275,16 @@ def main(args, test_vsc_param=False):
         pass
     else:
         for line in range(pixels_per_side):
-            list_all_lines.append(line)
+            # condition: only add line to processing list if "_line_" occurences less than 1000
+            if get_str_occ(processed, '_' + str(line)) < 1000:
+                list_all_lines.append(line)
 
     list_to_process_all = chunkIt(list_all_lines, total_arr_number)  # list of 5 lists, each list 200 line (1000/5)
-    list_to_process_this_node = list_to_process_all[arr_number - 1]  # e.g array number 1 will take list_to_process_all[0]
+    list_to_process_this_node = list_to_process_all[
+        arr_number - 1]  # e.g array number 1 will take list_to_process_all[0]
 
     if test_vsc_param:
+        # print out test parameters
         print('sig0_dir', sig0_dir)
         print('plia_dir', plia_dir)
         print('block_size', block_size)
@@ -297,7 +306,8 @@ def main(args, test_vsc_param=False):
                             line_list=list_to_process_this_node,
                             output_dir=out_dir,
                             ndvi_dir=ndvi_dir,
-                            orbit_direction=orbit_direction)
+                            orbit_direction=orbit_direction,
+                            processed=processed)
         else:
             # multiprocessing
             process_list = []
@@ -308,13 +318,14 @@ def main(args, test_vsc_param=False):
                 process_dict['sig0_dir'] = sig0_dir
                 process_dict['plia_dir'] = plia_dir
                 process_dict['block_size'] = block_size
-                process_dict['line'] = [line] # give as a list to avoid error in the loop
+                process_dict['line'] = [line]  # give as a list to avoid error in the loop
                 process_dict['output_dir'] = out_dir
                 process_dict['ndvi_dir'] = ndvi_dir
                 process_dict['orbit_direction'] = orbit_direction
+                process_dict['processed'] = processed
                 process_list.append(process_dict)
 
-            print("Node:", arr_number, "/",total_arr_number, "start the MP...:", datetime.now())
+            print("Node:", arr_number, "/", total_arr_number, "start the MP...:", datetime.now())
             print('Target: process ', len(process_list), 'lines...')
             pool = mp.Pool(mp_threads)
             pool.map(read_stack_line_mp, process_list)
@@ -328,7 +339,8 @@ def read_stack_line_mp(process_dict):
                     line_list=process_dict['line'],
                     output_dir=process_dict['output_dir'],
                     ndvi_dir=process_dict['ndvi_dir'],
-                    orbit_direction=process_dict['orbit_direction'])
+                    orbit_direction=process_dict['orbit_direction'],
+                    processed=process_dict['processed'])
 
 
 if __name__ == '__main__':
