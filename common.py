@@ -8,7 +8,6 @@ from configparser import ConfigParser
 import argparse
 import multiprocessing as mp
 import shutil
-import copy
 import cloudpickle
 from datetime import datetime
 import tempfile
@@ -199,6 +198,17 @@ def get_processed_list(out_dir):
     return processed_dump
 
 def get_str_occ(list, str):
+    '''
+    get string occurences in list of strings
+    Parameters
+    ----------
+    list: list of str
+    str: str
+
+    Returns
+    -------
+
+    '''
     return sum(str in s for s in list)
 
 
