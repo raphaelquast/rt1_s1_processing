@@ -257,12 +257,12 @@ def main(args, test_vsc_param=False):
     if args.arraynumber:
         arr_number = int(args.arraynumber)
     else:
-        raise Warning('-arraynumber needed')
+        raise Warning('-arraynumber missing')
 
     if args.totalarraynumber:
         total_arr_number = int(args.totalarraynumber)
     else:
-        raise Warning('-totalarraynumber needed')
+        raise Warning('-totalarraynumber missing')
 
     pixels_per_side = int(tif_size / block_size)
 
@@ -277,8 +277,7 @@ def main(args, test_vsc_param=False):
             list_all_lines.append(line)
 
     list_to_process_all = chunkIt(list_all_lines, total_arr_number)  # list of 5 lists, each list 200 line (1000/5)
-    list_to_process_this_node = list_to_process_all[
-        arr_number - 1]  # e.g array number 1 will take list_to_process_all[0]
+    list_to_process_this_node = list_to_process_all[arr_number - 1]  # e.g array number 1 will take list_to_process_all[0]
 
     if test_vsc_param:
         print('sig0_dir', sig0_dir)
@@ -304,24 +303,23 @@ def main(args, test_vsc_param=False):
                             ndvi_dir=ndvi_dir,
                             orbit_direction=orbit_direction)
         else:
-            # implement the multiprocessing here
+            # multiprocessing
             process_list = []
             # chunk the line list into smaller lists for processing
-            list_to_process_node_chunked = chunkIt(list_to_process_this_node, mp_threads * 2)
-            for cr_list in list_to_process_node_chunked:
+            # list_to_process_node_chunked = chunkIt(list_to_process_this_node, mp_threads * 2)
+            for line in list_to_process_this_node:
                 process_dict = {}
                 process_dict['sig0_dir'] = sig0_dir
                 process_dict['plia_dir'] = plia_dir
                 process_dict['block_size'] = block_size
-                process_dict['cr_list'] = cr_list
+                process_dict['line'] = [line] # give as a list to avoid error in the loop
                 process_dict['output_dir'] = out_dir
                 process_dict['ndvi_dir'] = ndvi_dir
                 process_dict['orbit_direction'] = orbit_direction
                 process_list.append(process_dict)
 
-            print("start the mp...:", datetime.now())
-            print('each computing node is processing ', len(process_list), 'lists...')
-            print('each list has about ', len(list_to_process_node_chunked[0]), 'lines...')
+            print("Node:", arr_number, "/",total_arr_number, "start the MP...:", datetime.now())
+            print('Target: process ', len(process_list), 'lines...')
             pool = mp.Pool(mp_threads)
             pool.map(read_stack_line_mp, process_list)
             pool.close()
@@ -331,7 +329,7 @@ def read_stack_line_mp(process_dict):
     read_stack_line(sig0_dir=process_dict['sig0_dir'],
                     plia_dir=process_dict['plia_dir'],
                     block_size=process_dict['block_size'],
-                    line_list=process_dict['cr_list'],
+                    line_list=process_dict['line'],
                     output_dir=process_dict['output_dir'],
                     ndvi_dir=process_dict['ndvi_dir'],
                     orbit_direction=process_dict['orbit_direction'])
@@ -340,13 +338,13 @@ def read_stack_line_mp(process_dict):
 if __name__ == '__main__':
     import sys
 
-    sys.argv.append("/home/tle/code/new/rt1_s1_processing/vsc_scripts/config_tle.ini")
+    sys.argv.append("/home/tle/code/new/rt1_s1_processing/config/config_tle.ini")
     sys.argv.append("-totalarraynumber")
-    sys.argv.append("1")
+    sys.argv.append("2")
     sys.argv.append("-arraynumber")
     sys.argv.append("1")
 
-    print("Start", datetime.now())
+    print("-------------START------------", datetime.now())
     main(sys.argv[1:], test_vsc_param=False)
 
     pass
