@@ -163,7 +163,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                 ndvi_list = []
                 for time in time_ndvi_list:
                     idx_ndvi = time_ndvi_list.index(time)
-                    ndvi_list.append([time, np.mean(data_ndvi_list[idx_ndvi])])
+                    ndvi_list.append([time, np.mean(data_ndvi_list[idx_ndvi][:, col * block_size:(col + 1) * block_size])])
 
                 df_ndvi = pd.DataFrame(ndvi_list)
                 df_ndvi.columns = ['time', 'ndvi']
