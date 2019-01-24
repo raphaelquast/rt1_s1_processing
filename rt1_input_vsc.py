@@ -96,27 +96,31 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                                            nodata=-9999)
     # read sig and plia blocks
 
-    for line in line_list:
+    for row in line_list:
         # make temp dir:
-        tmp_dir = make_tmp_dir(str(line))
+        tmp_dir = make_tmp_dir(str(row))
         # TODO: add here check output function (probably a blacklist), remove hardcode
-        print(get_worker_id(), 'read sig0 and plia stack... line:', line, datetime.now())
-        time_sig0_list, data_sig0_list = sig_stack.read_ts(0, line * block_size, 10000, block_size)
-        time_plia_list, data_plia_list = plia_stack.read_ts(0, line * block_size, 10000, block_size)
+        print(get_worker_id(), 'read sig0 and plia stack... line:', row, datetime.now())
+        time_sig0_list, data_sig0_list = sig_stack.read_ts(0, row * block_size, 10000, block_size)
+        time_plia_list, data_plia_list = plia_stack.read_ts(0, row * block_size, 10000, block_size)
 
         if ndvi_stack:
-            print(get_worker_id(), 'read ndvi stack..., line:', line, datetime.now())
-            time_ndvi_list, data_ndvi_list = ndvi_stack.read_ts(0, line * block_size, 10000, block_size)
+            print(get_worker_id(), 'read ndvi stack..., line:', row, datetime.now())
+            time_ndvi_list, data_ndvi_list = ndvi_stack.read_ts(0, row * block_size, 10000, block_size)
 
         # TODO: remove hard code in here
-        for px in range(1000):  # number of pixel per line
+        for col in range(1000):  # number of pixel per line
+            # if the [col_row] is processed already, continue
+            if str(col) + '_' + str(row) in processed:
+                continue
+
             df_px_list = []
-            print(get_worker_id(), 'preparing the data for line', line, "px", px, datetime.now())
+            print(get_worker_id(), 'preparing the data for line', row, "px", col, datetime.now())
             for time in time_sig0_list:
                 idx_sig0 = time_sig0_list.index(time)
                 idx_plia = time_plia_list.index(time)
-                px_sig0 = data_sig0_list[idx_sig0][:, px * block_size:(px + 1) * block_size]
-                px_plia = data_plia_list[idx_plia][:, px * block_size:(px + 1) * block_size]
+                px_sig0 = data_sig0_list[idx_sig0][:, col * block_size:(col + 1) * block_size]
+                px_plia = data_plia_list[idx_plia][:, col * block_size:(col + 1) * block_size]
 
                 sig0_plia_stack = np.vstack((px_sig0.flatten(), px_plia.flatten()))
                 df_px = pd.DataFrame(data=sig0_plia_stack.transpose(),
@@ -200,7 +204,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                 'frac': [True, 0.5, None, ([0.01], [1.])],
                 'omega': [True, 0.3, None, ([0.05], [0.6])],
             }
-            out_dict = {'dataset': df, 'defdict': defdict_i, '_fnevals_input': None, 'c': px, 'r': line,
+            out_dict = {'dataset': df, 'defdict': defdict_i, '_fnevals_input': None, 'c': col, 'r': row,
                         'outdir': tmp_dir}
             try:
                 parallelfunc(out_dict)
