@@ -34,6 +34,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
     -------
 
     '''
+    line_list = [987]
 
     random_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
@@ -108,6 +109,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             time_ndvi_list, data_ndvi_list = ndvi_stack.read_ts(0, row * block_size, tif_size, block_size)
 
         for col in range(int(tif_size / block_size)):  # number of pixel per line
+            col=989
             # if the [col_row] is processed already, continue
             if str(col) + '_' + str(row) in processed:
                 print(str(col) + '_' + str(row) + 'is processed')
@@ -152,7 +154,11 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             # sort by index
             df.sort_index(inplace=True)
 
-            df = inpdata_inc_average(df)
+            try:
+                df = inpdata_inc_average(df)
+            except Exception as e:
+                print(get_worker_id(), "inpdata_inc_average failed!", e)
+                continue
 
             # -----------------------------------------
 
@@ -208,7 +214,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             try:
                 parallelfunc(out_dict)
             except Exception as e:
-                print(e)
+                print(get_worker_id(), "parallelfunc failed!", e)
 
         # move temp folder into output dir
         move_dir(tmp_dir, output_dir)
