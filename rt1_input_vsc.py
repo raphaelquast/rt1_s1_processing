@@ -34,7 +34,6 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
     -------
 
     '''
-    line_list = [987]
 
     random_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
@@ -109,7 +108,6 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             time_ndvi_list, data_ndvi_list = ndvi_stack.read_ts(0, row * block_size, tif_size, block_size)
 
         for col in range(int(tif_size / block_size)):  # number of pixel per line
-            col=989
             # if the [col_row] is processed already, continue
             if str(col) + '_' + str(row) in processed:
                 print(str(col) + '_' + str(row) + 'is processed')
@@ -184,37 +182,14 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
 
                 # sort by index
                 df_ndvi.sort_index(inplace=True)
+            else:
+                df_ndvi = None
 
-            # ------------------------ RQ's manipulation
-            # TODO: add a condition to work without NDVI
-            VOD_input = df_ndvi.resample('D').interpolate(method='nearest')
-            # get a smooth curve
-            # VOD_input = VOD_input.rolling(window=60, center=True, min_periods=1).mean()
-            VOD_input = VOD_input.clip_lower(0).apply(savgol_filter, window_length=61, polyorder=2).clip_lower(0)
-            # reindex to input-dataset
-            VOD_input = VOD_input.reindex(df.index.drop_duplicates()).dropna()
-            # ensure that there are no ngative-values appearing (possible due to rolling-mean and interpolation)
-            VOD_input = VOD_input.clip_lower(0)
-            # drop all measurements where no VOD estimates are available
-            df = df.loc[VOD_input.dropna().index]
+            out_dict = {'dataset': df, 'df_ndvi': df_ndvi, '_fnevals_input': None,
+                        'c': col, 'r': row, 'outdir': tmp_dir}
 
-            # manual_dyn_df = pd.DataFrame(df.index.month.values.flatten(), df.index, columns=['VOD'])
-            defdict_i = {
-                'bsf': [False, 0.01, None, ([0.01], [.25])],
-                'v': [False, 0.4, None, ([0.01], [.4])],
-                'v2': [True, 1., None, ([0.5], [1.5])],
-                'VOD': [False, VOD_input.values.flatten()],
-                'SM': [True, 0.25, 'D', ([0.05], [0.5])],
-                # 'VOD'   : [True, 0.25,'30D', ([0.01], [1.])],
-                'frac': [True, 0.5, None, ([0.01], [1.])],
-                'omega': [True, 0.3, None, ([0.05], [0.6])],
-            }
-            out_dict = {'dataset': df, 'defdict': defdict_i, '_fnevals_input': None, 'c': col, 'r': row,
-                        'outdir': tmp_dir}
-            try:
-                parallelfunc(out_dict)
-            except Exception as e:
-                print(get_worker_id(), "parallelfunc failed!", e)
+            # print('processed: ', px, line, datetime.now())
+            parallelfunc(out_dict)
 
         # move temp folder into output dir
         move_dir(tmp_dir, output_dir)
