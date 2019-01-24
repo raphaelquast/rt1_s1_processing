@@ -18,7 +18,7 @@ from common import get_processed_list, get_str_occ
 
 
 def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_dir=None, orbit_direction='',
-                    processed=[]):
+                    processed=[], tif_size=10000):
     '''
     Read sig0 and plia rasters stack into a virtual raster stack, then read the time-series block-by block
     Parameters
@@ -99,24 +99,22 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
     for row in line_list:
         # make temp dir:
         tmp_dir = make_tmp_dir(str(row))
-        # TODO: add here check output function (probably a blacklist), remove hardcode
         print(get_worker_id(), 'read sig0 and plia stack... line:', row, datetime.now())
-        time_sig0_list, data_sig0_list = sig_stack.read_ts(0, row * block_size, 10000, block_size)
-        time_plia_list, data_plia_list = plia_stack.read_ts(0, row * block_size, 10000, block_size)
+        time_sig0_list, data_sig0_list = sig_stack.read_ts(0, row * block_size, tif_size, block_size)
+        time_plia_list, data_plia_list = plia_stack.read_ts(0, row * block_size, tif_size, block_size)
 
         if ndvi_stack:
             print(get_worker_id(), 'read ndvi stack..., line:', row, datetime.now())
-            time_ndvi_list, data_ndvi_list = ndvi_stack.read_ts(0, row * block_size, 10000, block_size)
+            time_ndvi_list, data_ndvi_list = ndvi_stack.read_ts(0, row * block_size, tif_size, block_size)
 
-        # TODO: remove hard code in here
-        for col in range(1000):  # number of pixel per line
+        for col in range(int(tif_size / block_size)):  # number of pixel per line
             # if the [col_row] is processed already, continue
             if str(col) + '_' + str(row) in processed:
                 print(str(col) + '_' + str(row) + 'is processed')
                 continue
 
             df_px_list = []
-            print(get_worker_id(), 'preparing the data for col', col,  'row', row, datetime.now())
+            print(get_worker_id(), 'preparing the data for col', col, 'row', row, datetime.now())
             for time in time_sig0_list:
                 idx_sig0 = time_sig0_list.index(time)
                 idx_plia = time_plia_list.index(time)
@@ -314,7 +312,8 @@ def main(args, test_vsc_param=False):
                             output_dir=out_dir,
                             ndvi_dir=ndvi_dir,
                             orbit_direction=orbit_direction,
-                            processed=processed)
+                            processed=processed,
+                            tif_size=tif_size)
         else:
             # multiprocessing
             process_list = []
@@ -330,6 +329,7 @@ def main(args, test_vsc_param=False):
                 process_dict['ndvi_dir'] = ndvi_dir
                 process_dict['orbit_direction'] = orbit_direction
                 process_dict['processed'] = processed
+                process_dict['tif_size'] = tif_size
                 process_list.append(process_dict)
 
             print("Node:", arr_number, "/", total_arr_number, "start the MP...:", datetime.now())
@@ -347,18 +347,19 @@ def read_stack_line_mp(process_dict):
                     output_dir=process_dict['output_dir'],
                     ndvi_dir=process_dict['ndvi_dir'],
                     orbit_direction=process_dict['orbit_direction'],
-                    processed=process_dict['processed'])
+                    processed=process_dict['processed'],
+                    tif_size=process_dict['tif_size'])
 
 
 if __name__ == '__main__':
     import sys
 
     # comment those line if you're working on the vsc
-    sys.argv.append("config/config_tle.ini")
-    sys.argv.append("-totalarraynumber")
-    sys.argv.append("2")
-    sys.argv.append("-arraynumber")
-    sys.argv.append("1")
+    # sys.argv.append("config/config_tle.ini")
+    # sys.argv.append("-totalarraynumber")
+    # sys.argv.append("2")
+    # sys.argv.append("-arraynumber")
+    # sys.argv.append("1")
 
     print("-------------START------------", datetime.now())
     main(sys.argv[1:], test_vsc_param=False)
