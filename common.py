@@ -186,7 +186,7 @@ def get_processed_list(out_dir):
     # traverse root directory, and list directories as dirs and files as files
     processed_dump = []
     for root, dirs, files in os.walk(out_dir):
-        processed_dump += [fil for fil in files if fil.endswith(".dump")]
+        processed_dump += [fil.replace('.dump', '') for fil in files if fil.endswith(".dump")]
     return processed_dump
 
 
