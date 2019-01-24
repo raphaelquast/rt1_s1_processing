@@ -282,6 +282,8 @@ def main(args, test_vsc_param=False):
             # condition: only add line to processing list if "_line_" occurences less than 1000
             if get_str_occ(processed, '_' + str(line)) < 1000:
                 list_all_lines.append(line)
+            else:
+                print(line, "has been fully processed, excluding..")
 
     list_to_process_all = chunkIt(list_all_lines, total_arr_number)  # list of 5 lists, each list 200 line (1000/5)
     list_to_process_this_node = list_to_process_all[
