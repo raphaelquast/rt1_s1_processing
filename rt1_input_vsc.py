@@ -13,7 +13,7 @@ from rt1_processing_funcs_juhuu import inpdata_inc_average
 import random, string
 from scipy.signal import savgol_filter
 import multiprocessing as mp
-from common import get_worker_id, move_tmp_dir, make_tmp_dir, chunkIt, parse_args, read_cfg, parallelfunc
+from common import get_worker_id, move_dir, make_tmp_dir, chunkIt, parse_args, read_cfg, parallelfunc
 
 
 def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_dir=None, orbit_direction=''):
@@ -206,7 +206,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                 print(e)
 
         # move temp folder into output dir
-        move_tmp_dir(tmp_dir, output_dir)
+        move_dir(tmp_dir, output_dir)
 
 
 def main(args, test_vsc_param=False):
@@ -334,7 +334,8 @@ def read_stack_line_mp(process_dict):
 if __name__ == '__main__':
     import sys
 
-    sys.argv.append("/home/tle/code/new/rt1_s1_processing/config/config_tle.ini")
+    # comment those line if you're working on the vsc
+    sys.argv.append("config/config_tle.ini")
     sys.argv.append("-totalarraynumber")
     sys.argv.append("2")
     sys.argv.append("-arraynumber")
