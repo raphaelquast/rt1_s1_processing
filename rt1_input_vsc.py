@@ -231,7 +231,7 @@ def main(args, test_vsc_param=False):
     else:
         test_corner = int(test_corner)
         upper_left_index = cfg['PARAMETER']['upper_left_index'].split(',')
-        col, row = list(map(int, upper_left_index))
+        col_test, row_test = list(map(int, upper_left_index))
 
     # take total array number and array number from arg
     if args.arraynumber:
@@ -252,15 +252,15 @@ def main(args, test_vsc_param=False):
     # prepare lines list
     list_all_lines = []
     if test_corner:
-        row_to_proc = range(row, row + test_corner)
-        col_to_proc = range(col, col + test_corner)
+        row_to_proc = range(row_test, row_test + test_corner)
+        col_to_proc = range(col_test, col_test + test_corner)
         for line in row_to_proc:
             # line filtering
             list_all_lines.append(line)
             # column filtering
-            for col in range(pixels_per_side):
-                if col not in list(col_to_proc):
-                    processed.append(str(col) + '_' + str(line))
+            for col_test in range(pixels_per_side):
+                if col_test not in list(col_to_proc):
+                    processed.append(str(col_test) + '_' + str(line))
     else:
         for line in range(pixels_per_side):
             # condition: only add line to processing list if "_line_" occurences less than 1000
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     # # comment those line if you're working on the vsc
     # sys.argv.append("config/config_tle.ini")
     # sys.argv.append("-totalarraynumber")
-    # sys.argv.append("2")
+    # sys.argv.append("1")
     # sys.argv.append("-arraynumber")
     # sys.argv.append("1")
 
