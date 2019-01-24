@@ -14,7 +14,6 @@ from datetime import datetime
 import tempfile
 
 
-
 def get_worker_id():
     '''
     return multiprocessing worker ID
@@ -171,6 +170,24 @@ def read_cfg(cfg_file, include_default=True):
                     ds[section][item] = value
 
     return ds
+
+
+def get_processed_list(out_dir):
+    '''
+    return the list of existing dump files without the extension (in out_dir)
+    Parameters
+    ----------
+    out_dir
+
+    Returns
+    -------
+
+    '''
+    # traverse root directory, and list directories as dirs and files as files
+    processed_dump = []
+    for root, dirs, files in os.walk(out_dir):
+        processed_dump += [fil for fil in files if fil.endswith(".dump")]
+    return processed_dump
 
 
 def parallelfunc(import_dict):
