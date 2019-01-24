@@ -161,61 +161,12 @@ def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=Non
 
             # sort by index
             df_ndvi.sort_index(inplace=True)
-
-        # ------------------------ RQ's manipulation
-        '''
-        manual_dyn_df = pd.DataFrame(df.index.month.values.flatten(), df.index, columns=['VOD'])
-        fixed_vals = {
-            # --- specification of volume-scattering phase function
-            'v_forward': [False, .4],  # asymmetry factor of forward-peak
-            'v_bounceoff': [False, .4],  # asymmetry factor of bounceoff-peak
-            'alpha': [False, .5],  # fraction of forward / backward peak intensity
-            'isopart': [False, .5],  # fraction of isotropic / directional peak intensity
-            'v1': [False, 0.0],  # minimum optical depth value
-            'v2': [False, 1.],  # maximum optical depth value
-            # --- specification of surface-scattering phase function
-            'aa': [False, .4],  # surface a-parameter
-            's1': [False, 0.0],  # minimum NormBRDF value
-        }
-        defdict_vars = {
-            'SM': [True, 0.25, 'D', ([0.01], [1.])],
-            'VOD': [True, .25, 'manual', ([0.05], [1.]), manual_dyn_df],
-            'bsf': [False, 0.0, None, ([0.01], [.25])],
-            'tt': [False, 0.2, None, ([0.05], [0.6])],
-            'omega': [True, 0.1, None, ([0.1], [0.6])],
-            's2': [False, 0.25, None, ([0.15], [0.3])],
-        }
-
-        defdict_i = {**fixed_vals, **defdict_vars}
-        '''
-
-        VOD_input = df_ndvi.resample('D').interpolate(method='nearest')
-        # get a smooth curve
-        # VOD_input = VOD_input.rolling(window=60, center=True, min_periods=1).mean()
-        VOD_input = VOD_input.clip_lower(0).apply(savgol_filter, window_length=61, polyorder=2).clip_lower(0)
-        # reindex to input-dataset
-        VOD_input = VOD_input.reindex(df.index.drop_duplicates()).dropna()
-        # ensure that there are no ngative-values appearing (possible due to rolling-mean and interpolation)
-        VOD_input = VOD_input.clip_lower(0)
-        # drop all measurements where no VOD estimates are available
-        df = df.loc[VOD_input.dropna().index]
-
-        # manual_dyn_df = pd.DataFrame(df.index.month.values.flatten(), df.index, columns=['VOD'])
-        defdict_i = {
-                    'bsf'   : [False, 0.01, None,  ([0.01], [.25])],
-                    'v'     : [False, 0.4, None, ([0.01], [.4])],
-                    #'v2'    : [True, 1., None, ([0.5], [1.5])],
-                    'v2'    : [True, 1., None, ([0.1], [1.5])],
-                    #'VOD'   : [False, VOD_input.values.flatten()],
-                    #'VOD'   : [True, 0.25,'30D', ([0.01], [1.])],
-                    'VOD'   : [False,  ((VOD_input - VOD_input.min())/(VOD_input - VOD_input.min()).max()).values.flatten()],
-                    'SM'    : [True, 0.25,  'D',   ([0.05], [0.5])],
-                    'frac'  : [True, 0.5, None,  ([0.01], [1.])],
-                    'omega' : [True, 0.3,  None,  ([0.05], [0.6])],
-                    }
+        else:
+            df_ndvi = None
 
         # TODO: pass ndvi df to out_dict
-        out_dict = {'dataset': df, 'defdict': defdict_i, '_fnevals_input': None, 'c': c, 'r': r, 'outdir': output_dir}
+        out_dict = {'dataset': df, 'df_ndvi': df_ndvi, '_fnevals_input': None,
+                    'c': c, 'r': r, 'outdir': output_dir}
         parallelfunc(out_dict)
 
 
@@ -329,7 +280,7 @@ def main(args, test_vsc_param=False):
                 process_list.append(process_dict)
 
             print("start the mp...:", datetime.now())
-            print('processing ', len(process_list), 'sites...')
+            print('processing ', len(list_to_process_node), 'sites...')
             pool = mp.Pool(mp_threads)
             pool.map(read_stack_mp, process_list)
             pool.close()
@@ -344,10 +295,9 @@ def read_stack_mp(process_dict):
                ndvi_dir=process_dict['ndvi_dir'],
                orbit_direction=process_dict['orbit_direction'])
 
-
 if __name__ == '__main__':
     import sys
-    sys.argv.append(r"D:\USERS\rq\rt1_s1_processing\config_pj7.ini")
+    sys.argv.append(r"D:\USERS\rq\rt1_s1_processing\config_pr7.ini")
     sys.argv.append("-totalarraynumber")
     sys.argv.append("1")
     sys.argv.append("-arraynumber")
