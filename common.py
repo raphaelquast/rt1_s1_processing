@@ -230,4 +230,3 @@ def parallelfunc(import_dict):
     with open(os.path.join(outdir, str(c) + '_' + str(r) + '.dump'), 'wb') as file:
         cloudpickle.dump(fit, file)
         # return fit
-    print(get_worker_id(), "processing done", 'C:', c, ' R:', r, 'time:', datetime.now())
