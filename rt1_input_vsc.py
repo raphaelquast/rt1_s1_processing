@@ -109,7 +109,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
         for col in range(int(tif_size / block_size)):  # number of pixel per line
             # if the [col_row] is processed already, continue
             if str(col) + '_' + str(row) in processed:
-                print(str(col) + '_' + str(row) + 'is processed')
+                # print(str(col) + '_' + str(row) + 'is processed')
                 continue
 
             df_px_list = []
@@ -231,7 +231,7 @@ def main(args, test_vsc_param=False):
     else:
         test_corner = int(test_corner)
         upper_left_index = cfg['PARAMETER']['upper_left_index'].split(',')
-        upper_left_index = list(map(int, upper_left_index))
+        col, row = list(map(int, upper_left_index))
 
     # take total array number and array number from arg
     if args.arraynumber:
@@ -252,9 +252,15 @@ def main(args, test_vsc_param=False):
     # prepare lines list
     list_all_lines = []
     if test_corner:
-        # TODO: make test_corner work again (or probably test line)
-        raise ValueError("test_corner does not work yet")
-        pass
+        row_to_proc = range(row, row + test_corner)
+        col_to_proc = range(col, col + test_corner)
+        for line in row_to_proc:
+            # line filtering
+            list_all_lines.append(line)
+            # column filtering
+            for col in range(pixels_per_side):
+                if col not in list(col_to_proc):
+                    processed.append(str(col) + '_' + str(line))
     else:
         for line in range(pixels_per_side):
             # condition: only add line to processing list if "_line_" occurences less than 1000
