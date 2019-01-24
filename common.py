@@ -60,14 +60,11 @@ def move_dir(tmp_dir, outdir):
     -------
 
     '''
-    try:
-        out_path = os.path.join(outdir, os.path.basename(tmp_dir))
-        if not os.path.exists(out_path):
-            os.makedirs(out_path)
-        copytree(tmp_dir, out_path)
-        shutil.rmtree(tmp_dir)
-    except Exception as e:
-        print(e)
+    out_path = os.path.join(outdir, os.path.basename(tmp_dir))
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+    copytree(tmp_dir, out_path)
+    shutil.rmtree(tmp_dir)
 
 
 def copytree(src, dst, symlinks=False, ignore=None):
