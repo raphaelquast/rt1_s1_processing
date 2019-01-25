@@ -13,7 +13,7 @@ from rt1_processing_funcs_juhuu import inpdata_inc_average
 import random, string
 import multiprocessing as mp
 from common import get_worker_id, move_dir, make_tmp_dir, chunkIt, parse_args, read_cfg, parallelfunc
-from common import get_processed_list, get_str_occ
+from common import get_processed_list, get_str_occ, prepare_index_array
 
 
 def prepare_data_mp(input_dict):
@@ -37,10 +37,7 @@ def prepare_data(time_sig0_list, data_sig0_list, data_plia_list, time_ndvi_list,
     px_plia = data_plia_list[:, :, col * block_size:(col + 1) * block_size]
 
     # prepare index array
-    px_time = np.empty(px_sig0.shape, dtype=object)
-    for time in time_sig0_list:
-        idx = time_sig0_list.index(time)
-        px_time[idx] = time
+    px_time = prepare_index_array(time_sig0_list, px_sig0)
 
     sig0_plia_stack = np.vstack((px_sig0.flatten(), px_plia.flatten()))
     df = pd.DataFrame(data=sig0_plia_stack.transpose(),
@@ -59,9 +56,6 @@ def prepare_data(time_sig0_list, data_sig0_list, data_plia_list, time_ndvi_list,
     # convert to radian
     df['inc'] = np.deg2rad(df['inc'])
 
-    # sort by index
-    df.sort_index(inplace=True)
-
     try:
         df = inpdata_inc_average(df)
     except Exception as e:
@@ -71,13 +65,14 @@ def prepare_data(time_sig0_list, data_sig0_list, data_plia_list, time_ndvi_list,
     # -----------------------------------------
 
     if time_ndvi_list:
-        ndvi_list = []
-        for time in time_ndvi_list:
-            idx_ndvi = time_ndvi_list.index(time)
-            ndvi_list.append([time, np.mean(data_ndvi_list[idx_ndvi][:, col * block_size:(col + 1) * block_size])])
+        px_ndvi = data_ndvi_list[:, :, col * block_size:(col + 1) * block_size]
 
-        df_ndvi = pd.DataFrame(ndvi_list)
-        df_ndvi.columns = ['time', 'ndvi']
+        # prepare index array
+        px_time_ndvi = prepare_index_array(time_ndvi_list, px_ndvi)
+
+        df_ndvi = pd.DataFrame(data=px_ndvi.flatten(),
+                               index=px_time_ndvi.flatten(),
+                               columns=['ndvi'])
 
         # nan handling
         df_ndvi = df_ndvi.replace(list(range(251, 256)), np.nan)
@@ -87,11 +82,8 @@ def prepare_data(time_sig0_list, data_sig0_list, data_plia_list, time_ndvi_list,
         # convert to physical value
         df_ndvi['ndvi'] = df_ndvi['ndvi'] / 250 - 0.08
 
-        # set index
-        df_ndvi = df_ndvi.set_index('time')
-
-        # sort by index
-        df_ndvi.sort_index(inplace=True)
+        # average daily
+        df_ndvi = df_ndvi.groupby(df_ndvi.index).mean()
     else:
         df_ndvi = None
 
