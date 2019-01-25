@@ -194,32 +194,53 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             time_ndvi_list = None
             data_ndvi_list = None
 
-        # start multiprocessing
-        process_list = []
-        for col in range(int(tif_size / block_size)):  # number of pixel per line
-            # if the [col_row] is processed already, continue
-            if str(col) + '_' + str(row) in processed:
-                # print(str(col) + '_' + str(row) + 'is processed')
-                continue
-            else:
-                process_dict = {}
-                process_dict['time_sig0_list'] = time_sig0_list
-                process_dict['data_sig0_list'] = data_sig0_list
-                process_dict['time_plia_list'] = time_plia_list
-                process_dict['data_plia_list'] = data_plia_list
-                process_dict['time_ndvi_list'] = time_ndvi_list
-                process_dict['data_ndvi_list'] = data_ndvi_list
-                process_dict['col'] = col
-                process_dict['row'] = row
-                process_dict['block_size'] = block_size
-                process_dict['out_dir'] = tmp_dir # write output file to tmp_dir
-                process_list.append(process_dict)
+        # single thread processing
+        if mp_threads in [0, 1]:
+            for col in range(int(tif_size / block_size)):  # number of pixel per line
+                # if the [col_row] is processed already, continue
+                if str(col) + '_' + str(row) in processed:
+                    # print(str(col) + '_' + str(row) + 'is processed')
+                    continue
+                else:
+                    prepare_data(time_sig0_list=time_sig0_list,
+                                 data_sig0_list=data_sig0_list,
+                                 time_plia_list=time_plia_list,
+                                 data_plia_list=data_plia_list,
+                                 time_ndvi_list=time_ndvi_list,
+                                 data_ndvi_list=data_ndvi_list,
+                                 col=col,
+                                 row=row,
+                                 block_size=block_size,
+                                 out_dir=output_dir)
 
-        pool = mp.Pool(mp_threads)
-        pool.map(prepare_data_mp, process_list)
-        pool.close()
-        pool=None
-        move_dir(tmp_dir, output_dir) # move whole processed line to output dir
+
+        else:
+            # start multiprocessing
+            process_list = []
+            for col in range(int(tif_size / block_size)):  # number of pixel per line
+                # if the [col_row] is processed already, continue
+                if str(col) + '_' + str(row) in processed:
+                    # print(str(col) + '_' + str(row) + 'is processed')
+                    continue
+                else:
+                    process_dict = {}
+                    process_dict['time_sig0_list'] = time_sig0_list
+                    process_dict['data_sig0_list'] = data_sig0_list
+                    process_dict['time_plia_list'] = time_plia_list
+                    process_dict['data_plia_list'] = data_plia_list
+                    process_dict['time_ndvi_list'] = time_ndvi_list
+                    process_dict['data_ndvi_list'] = data_ndvi_list
+                    process_dict['col'] = col
+                    process_dict['row'] = row
+                    process_dict['block_size'] = block_size
+                    process_dict['out_dir'] = tmp_dir  # write output file to tmp_dir
+                    process_list.append(process_dict)
+
+            pool = mp.Pool(mp_threads)
+            pool.map(prepare_data_mp, process_list)
+            pool.close()
+            pool = None
+            move_dir(tmp_dir, output_dir)  # move whole processed line to output dir
 
 
 def main(args, test_vsc_param=False):
@@ -340,12 +361,12 @@ def main(args, test_vsc_param=False):
 if __name__ == '__main__':
     import sys
 
-    # # comment those lines if you're working on the VSC
-    # sys.argv.append("config/config_tle.ini")
-    # sys.argv.append("-totalarraynumber")
-    # sys.argv.append("1")
-    # sys.argv.append("-arraynumber")
-    # sys.argv.append("1")
+    # comment those lines if you're working on the VSC
+    sys.argv.append("config/config_tle.ini")
+    sys.argv.append("-totalarraynumber")
+    sys.argv.append("1")
+    sys.argv.append("-arraynumber")
+    sys.argv.append("1")
 
     print("-------------START------------", datetime.now())
     main(sys.argv[1:], test_vsc_param=False)
