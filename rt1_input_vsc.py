@@ -182,7 +182,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
 
     for row in line_list:
         # make temp dir in ram disk VSC
-        # tmp_dir = make_tmp_dir(str(row))
+        tmp_dir = make_tmp_dir(str(row))
         print('read sig0 and plia stack... line:', row, datetime.now())
         time_sig0_list, data_sig0_list = sig_stack.read_ts(0, row * block_size, tif_size, block_size)
         time_plia_list, data_plia_list = plia_stack.read_ts(0, row * block_size, tif_size, block_size)
@@ -212,12 +212,14 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                 process_dict['col'] = col
                 process_dict['row'] = row
                 process_dict['block_size'] = block_size
-                process_dict['out_dir'] = output_dir
+                process_dict['out_dir'] = tmp_dir # write output file to tmp_dir
                 process_list.append(process_dict)
 
         pool = mp.Pool(mp_threads)
         pool.map(prepare_data_mp, process_list)
         pool.close()
+        pool=None
+        move_dir(tmp_dir, output_dir) # move whole processed line to output dir
 
 
 def main(args, test_vsc_param=False):
