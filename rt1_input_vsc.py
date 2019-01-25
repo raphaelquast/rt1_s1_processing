@@ -246,7 +246,7 @@ def main(args, test_vsc_param=False):
 
     pixels_per_side = int(tif_size / block_size)
 
-    # get processed files:
+    # get processed lines:
     processed = get_processed_list(out_dir)
 
     # prepare lines list
@@ -261,17 +261,22 @@ def main(args, test_vsc_param=False):
             for col_test in range(pixels_per_side):
                 if col_test not in list(col_to_proc):
                     processed.append(str(col_test) + '_' + str(line))
+    # process full tile (all the lines in tile)
     else:
         for line in range(pixels_per_side):
-            # condition: only add line to processing list if "_line_" occurences less than 1000
-            if get_str_occ(processed, '_' + str(line)) < 1000:
-                list_all_lines.append(line)
-            else:
-                print(line, "has been fully processed, excluding..")
+            list_all_lines.append(line)
 
+    # distributing to VSC computing nodes, if run on single machine, total_arr_number should be 1
     list_to_process_all = chunkIt(list_all_lines, total_arr_number)  # list of 5 lists, each list 200 line (1000/5)
-    list_to_process_this_node = list_to_process_all[
-        arr_number - 1]  # e.g array number 1 will take list_to_process_all[0]
+    list_to_process_this_node = list_to_process_all[arr_number - 1]  # e.g array number 1 take list_to_process_all[0]
+
+    if not test_corner:
+        # remove fully processed line only test_corner is not active
+        # condition: only add line to processing list if "_line_" occurences less than 1000
+        for line in list_to_process_this_node:
+            if get_str_occ(processed, '_' + str(line)) >= pixels_per_side:
+                print(line, "was fully processed, removing..")
+                list_to_process_this_node.remove(line)
 
     if test_vsc_param:
         # print out test parameters
@@ -339,7 +344,7 @@ def read_stack_line_mp(process_dict):
 if __name__ == '__main__':
     import sys
 
-    # # comment those line if you're working on the vsc
+    # # comment those lines if you're working on the VSC
     # sys.argv.append("config/config_tle.ini")
     # sys.argv.append("-totalarraynumber")
     # sys.argv.append("1")
