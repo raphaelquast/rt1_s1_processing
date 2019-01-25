@@ -11,6 +11,7 @@ import shutil
 import cloudpickle
 from datetime import datetime
 import tempfile
+import numpy as np
 
 
 def get_worker_id():
@@ -27,6 +28,13 @@ def get_worker_id():
     except Exception as e:
         print(e)
 
+
+def prepare_index_array(time_list, data_array):
+    px_time = np.empty(data_array.shape, dtype=object)
+    for time in time_list:
+        idx = time_list.index(time)
+        px_time[idx] = time
+    return px_time
 
 def make_tmp_dir(sub_folder_name):
     '''
