@@ -19,7 +19,6 @@ from common import get_processed_list, get_str_occ
 def prepare_data_mp(input_dict):
     prepare_data(time_sig0_list=input_dict['time_sig0_list'],
                  data_sig0_list=input_dict['data_sig0_list'],
-                 time_plia_list=input_dict['time_plia_list'],
                  data_plia_list=input_dict['data_plia_list'],
                  time_ndvi_list=input_dict['time_ndvi_list'],
                  data_ndvi_list=input_dict['data_ndvi_list'],
@@ -29,23 +28,24 @@ def prepare_data_mp(input_dict):
                  out_dir=input_dict['out_dir'])
 
 
-def prepare_data(time_sig0_list, data_sig0_list, time_plia_list, data_plia_list, time_ndvi_list, data_ndvi_list,
+def prepare_data(time_sig0_list, data_sig0_list, data_plia_list, time_ndvi_list, data_ndvi_list,
                  col, row, block_size, out_dir):
-    df_px_list = []
     print(get_worker_id(), 'preparing the data for col', col, 'row', row, datetime.now())
+
+    # convert plia, sig0 into df
+    px_sig0 = data_sig0_list[:, :, col * block_size:(col + 1) * block_size]
+    px_plia = data_plia_list[:, :, col * block_size:(col + 1) * block_size]
+
+    # prepare index array
+    px_time = np.empty(px_sig0.shape, dtype=object)
     for time in time_sig0_list:
-        idx_sig0 = time_sig0_list.index(time)
-        idx_plia = time_plia_list.index(time)
-        px_sig0 = data_sig0_list[idx_sig0][:, col * block_size:(col + 1) * block_size]
-        px_plia = data_plia_list[idx_plia][:, col * block_size:(col + 1) * block_size]
+        idx = time_sig0_list.index(time)
+        px_time[idx] = time
 
-        sig0_plia_stack = np.vstack((px_sig0.flatten(), px_plia.flatten()))
-        df_px = pd.DataFrame(data=sig0_plia_stack.transpose(),
-                             index=np.full((sig0_plia_stack.shape[1],), time),
-                             columns=['sig', 'inc'])
-        df_px_list.append(df_px)
-
-    df = pd.concat(df_px_list)
+    sig0_plia_stack = np.vstack((px_sig0.flatten(), px_plia.flatten()))
+    df = pd.DataFrame(data=sig0_plia_stack.transpose(),
+                      index=px_time.flatten(),
+                      columns=['sig', 'inc'])
 
     # nan handling
     df = df.replace(-9999, np.nan)
@@ -166,6 +166,18 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             del times_sig0[idx_sig0_no_plia]
             del filelist_sig0[idx_sig0_no_plia]
             print("Warning! The scene in this date ", time, " doesn't have the correspond plia. Removing...")
+    # sort
+    filelist_plia.sort()
+    times_plia.sort()
+    filelist_sig0.sort()
+    times_sig0.sort()
+
+    # check index
+    for time in times_sig0:
+        idx = times_sig0.index(time)
+        if times_sig0[idx] != times_plia[idx] or os.path.basename(filelist_sig0[idx])[1:16] != os.path.basename(
+                filelist_plia[idx])[1:16]:
+            raise ValueError("index is wrong!")
 
     # read ndvi to virtual stack
     if ndvi_dir:
@@ -204,7 +216,6 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                 else:
                     prepare_data(time_sig0_list=time_sig0_list,
                                  data_sig0_list=data_sig0_list,
-                                 time_plia_list=time_plia_list,
                                  data_plia_list=data_plia_list,
                                  time_ndvi_list=time_ndvi_list,
                                  data_ndvi_list=data_ndvi_list,
@@ -226,7 +237,6 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                     process_dict = {}
                     process_dict['time_sig0_list'] = time_sig0_list
                     process_dict['data_sig0_list'] = data_sig0_list
-                    process_dict['time_plia_list'] = time_plia_list
                     process_dict['data_plia_list'] = data_plia_list
                     process_dict['time_ndvi_list'] = time_ndvi_list
                     process_dict['data_ndvi_list'] = data_ndvi_list
