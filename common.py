@@ -23,7 +23,7 @@ def get_worker_id():
     try:
         if "Main" in str(mp.current_process()):
             return ("Single thread:")
-        return str(mp.current_process())[21:30]
+        return str(mp.current_process())
     except Exception as e:
         print(e)
 
