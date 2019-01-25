@@ -134,8 +134,10 @@ def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=Non
         # sort by index
         df.sort_index(inplace=True)
 
-        df = inpdata_inc_average(df)
-
+        try:
+            df = inpdata_inc_average(df)
+        except Exception:
+            continue
         # -----------------------------------------
 
         if ndvi_stack:
@@ -297,7 +299,7 @@ def read_stack_mp(process_dict):
 
 if __name__ == '__main__':
     import sys
-    sys.argv.append(r"D:\USERS\rq\rt1_s1_processing\config_pr7.ini")
+    sys.argv.append(r"D:\USERS\rq\rt1_s1_processing\config\config_pr7.ini")
     sys.argv.append("-totalarraynumber")
     sys.argv.append("1")
     sys.argv.append("-arraynumber")

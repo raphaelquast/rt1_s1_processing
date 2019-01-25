@@ -257,18 +257,19 @@ def parallelfunc(import_dict):
         # manual_dyn_df = pd.DataFrame(dataset.index.month.values.flatten(),
         #                              dataset.index, columns=['VOD'])
         defdict = {
-            'bsf': [False, 0.01, None, ([0.01], [.25])],
-            'v': [False, 0.4, None, ([0.01], [.4])],
-            # 'v2'    : [True, 1., None, ([0.5], [1.5])],
-            'v2': [True, 1., None, ([0.1], [1.5])],
-            # 'VOD'   : [False, VOD_input.values.flatten()],
-            # 'VOD'   : [True, 0.25,'30D', ([0.01], [1.])],
-            'VOD': [False, ((VOD_input - VOD_input.min()) / (VOD_input - VOD_input.min()).max()).values.flatten()],
-            # 'SM'    : [True, 0.25,  'D',   ([0.05], [0.5])],
-            'SM': [True, 0.1, 'D', ([0.01], [0.2])],
-            'frac': [True, 0.5, None, ([0.01], [1.])],
-            'omega': [True, 0.3, None, ([0.05], [0.6])],
-        }
+            'bsf'   : [False, 0.01, None,  ([0.01], [.25])],
+            'v'     : [False, 0.4, None, ([0.01], [.4])],
+            #'v2'    : [True, 1., None, ([0.5], [1.5])],
+            'v2'    : [True, 1., None, ([0.1], [1.5])],
+            'VOD'   : [False, VOD_input.values.flatten()],
+            #'VOD'   : [True, 0.25,'30D', ([0.01], [1.])],
+            #'VOD'   : [False,  ((VOD_input - VOD_input.min())/(VOD_input - VOD_input.min()).max()).values.flatten()],
+            #'SM'    : [True, 0.25,  'D',   ([0.05], [0.5])],
+            'SM'    : [True, 0.1,  'D',   ([0.01], [0.2])],
+            'frac'  : [True, 0.5, None,  ([0.01], [1.])],
+            'omega' : [True, 0.3,  None,  ([0.05], [0.6])],
+            }
+
 
     _fnevals_input = import_dict['_fnevals_input']
 
