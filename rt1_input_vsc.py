@@ -11,14 +11,90 @@ import pandas as pd
 import numpy as np
 from rt1_processing_funcs_juhuu import inpdata_inc_average
 import random, string
-from scipy.signal import savgol_filter
 import multiprocessing as mp
 from common import get_worker_id, move_dir, make_tmp_dir, chunkIt, parse_args, read_cfg, parallelfunc
-from common import get_processed_list, get_str_occ
+from common import get_processed_list, get_str_occ, prepare_index_array
+
+
+def prepare_data_mp(input_dict):
+    prepare_data(time_sig0_list=input_dict['time_sig0_list'],
+                 data_sig0_list=input_dict['data_sig0_list'],
+                 data_plia_list=input_dict['data_plia_list'],
+                 time_ndvi_list=input_dict['time_ndvi_list'],
+                 data_ndvi_list=input_dict['data_ndvi_list'],
+                 col=input_dict['col'],
+                 row=input_dict['row'],
+                 block_size=input_dict['block_size'],
+                 out_dir=input_dict['out_dir'])
+
+
+def prepare_data(time_sig0_list, data_sig0_list, data_plia_list, time_ndvi_list, data_ndvi_list,
+                 col, row, block_size, out_dir):
+    print(get_worker_id(), 'preparing the data for col', col, 'row', row, datetime.now())
+
+    # convert plia, sig0 into df
+    px_sig0 = data_sig0_list[:, :, col * block_size:(col + 1) * block_size]
+    px_plia = data_plia_list[:, :, col * block_size:(col + 1) * block_size]
+
+    # prepare index array
+    px_time = prepare_index_array(time_sig0_list, px_sig0)
+
+    sig0_plia_stack = np.vstack((px_sig0.flatten(), px_plia.flatten()))
+    df = pd.DataFrame(data=sig0_plia_stack.transpose(),
+                      index=px_time.flatten(),
+                      columns=['sig', 'inc'])
+
+    # nan handling
+    df = df.replace(-9999, np.nan)
+
+    df = df.dropna()
+
+    # true value
+    df['sig'] = df['sig'].div(100)
+    df['inc'] = df['inc'].div(100)
+
+    # convert to radian
+    df['inc'] = np.deg2rad(df['inc'])
+
+    try:
+        df = inpdata_inc_average(df)
+    except Exception as e:
+        print(get_worker_id(), "inpdata_inc_average failed!", e)
+        return
+
+    # -----------------------------------------
+
+    if time_ndvi_list:
+        px_ndvi = data_ndvi_list[:, :, col * block_size:(col + 1) * block_size]
+
+        # prepare index array
+        px_time_ndvi = prepare_index_array(time_ndvi_list, px_ndvi)
+
+        df_ndvi = pd.DataFrame(data=px_ndvi.flatten(),
+                               index=px_time_ndvi.flatten(),
+                               columns=['ndvi'])
+
+        # nan handling
+        df_ndvi = df_ndvi.replace(list(range(251, 256)), np.nan)
+
+        df_ndvi = df_ndvi.dropna()
+
+        # convert to physical value
+        df_ndvi['ndvi'] = df_ndvi['ndvi'] / 250 - 0.08
+
+        # average daily
+        df_ndvi = df_ndvi.groupby(df_ndvi.index).mean()
+    else:
+        df_ndvi = None
+
+    out_dict = {'dataset': df, 'df_ndvi': df_ndvi, '_fnevals_input': None,
+                'c': col, 'r': row, 'outdir': out_dir}
+
+    parallelfunc(out_dict)
 
 
 def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_dir=None, orbit_direction='',
-                    processed=[], tif_size=10000):
+                    processed=[], tif_size=10000, mp_threads=10):
     '''
     Read sig0 and plia rasters stack into a virtual raster stack, then read the time-series block-by block
     Parameters
@@ -82,6 +158,18 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             del times_sig0[idx_sig0_no_plia]
             del filelist_sig0[idx_sig0_no_plia]
             print("Warning! The scene in this date ", time, " doesn't have the correspond plia. Removing...")
+    # sort
+    filelist_plia.sort()
+    times_plia.sort()
+    filelist_sig0.sort()
+    times_sig0.sort()
+
+    # check index
+    for time in times_sig0:
+        idx = times_sig0.index(time)
+        if times_sig0[idx] != times_plia[idx] or os.path.basename(filelist_sig0[idx])[1:16] != os.path.basename(
+                filelist_plia[idx])[1:16]:
+            raise ValueError("index is wrong!")
 
     # read ndvi to virtual stack
     if ndvi_dir:
@@ -97,102 +185,64 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
     # read sig and plia blocks
 
     for row in line_list:
-        # make temp dir:
+        # make temp dir in ram disk VSC
         tmp_dir = make_tmp_dir(str(row))
-        print(get_worker_id(), 'read sig0 and plia stack... line:', row, datetime.now())
+        print('read sig0 and plia stack... line:', row, datetime.now())
         time_sig0_list, data_sig0_list = sig_stack.read_ts(0, row * block_size, tif_size, block_size)
         time_plia_list, data_plia_list = plia_stack.read_ts(0, row * block_size, tif_size, block_size)
 
         if ndvi_stack:
-            print(get_worker_id(), 'read ndvi stack..., line:', row, datetime.now())
+            print('read ndvi stack..., line:', row, datetime.now())
             time_ndvi_list, data_ndvi_list = ndvi_stack.read_ts(0, row * block_size, tif_size, block_size)
+        else:
+            time_ndvi_list = None
+            data_ndvi_list = None
 
-        for col in range(int(tif_size / block_size)):  # number of pixel per line
-            # if the [col_row] is processed already, continue
-            if str(col) + '_' + str(row) in processed:
-                print(str(col) + '_' + str(row) + 'is processed')
-                continue
+        # single thread processing
+        if mp_threads in [0, 1]:
+            for col in range(int(tif_size / block_size)):  # number of pixel per line
+                # if the [col_row] is processed already, continue
+                if str(col) + '_' + str(row) in processed:
+                    # print(str(col) + '_' + str(row) + 'is processed')
+                    continue
+                else:
+                    prepare_data(time_sig0_list=time_sig0_list,
+                                 data_sig0_list=data_sig0_list,
+                                 data_plia_list=data_plia_list,
+                                 time_ndvi_list=time_ndvi_list,
+                                 data_ndvi_list=data_ndvi_list,
+                                 col=col,
+                                 row=row,
+                                 block_size=block_size,
+                                 out_dir=output_dir)
 
-            df_px_list = []
-            print(get_worker_id(), 'preparing the data for col', col, 'row', row, datetime.now())
-            for time in time_sig0_list:
-                idx_sig0 = time_sig0_list.index(time)
-                idx_plia = time_plia_list.index(time)
-                px_sig0 = data_sig0_list[idx_sig0][:, col * block_size:(col + 1) * block_size]
-                px_plia = data_plia_list[idx_plia][:, col * block_size:(col + 1) * block_size]
 
-                sig0_plia_stack = np.vstack((px_sig0.flatten(), px_plia.flatten()))
-                df_px = pd.DataFrame(data=sig0_plia_stack.transpose(),
-                                     index=np.full((sig0_plia_stack.shape[1],), time),
-                                     columns=['sig', 'inc'])
-                df_px_list.append(df_px)
+        else:
+            # start multiprocessing
+            process_list = []
+            for col in range(int(tif_size / block_size)):  # number of pixel per line
+                # if the [col_row] is processed already, continue
+                if str(col) + '_' + str(row) in processed:
+                    # print(str(col) + '_' + str(row) + 'is processed')
+                    continue
+                else:
+                    process_dict = {}
+                    process_dict['time_sig0_list'] = time_sig0_list
+                    process_dict['data_sig0_list'] = data_sig0_list
+                    process_dict['data_plia_list'] = data_plia_list
+                    process_dict['time_ndvi_list'] = time_ndvi_list
+                    process_dict['data_ndvi_list'] = data_ndvi_list
+                    process_dict['col'] = col
+                    process_dict['row'] = row
+                    process_dict['block_size'] = block_size
+                    process_dict['out_dir'] = tmp_dir  # write output file to tmp_dir
+                    process_list.append(process_dict)
 
-                # old stupid way
-                # loop over slice
-                # for row in range(block_size):
-                #     for col in range(px * block_size, (px + 1) * block_size):
-                #         sig0_value = data_sig0_list[idx_sig0][row][col]
-                #         plia_value = data_plia_list[idx_plia][row][col]
-                #         final_list.append([time, sig0_value, plia_value])
-
-            df = pd.concat(df_px_list)
-
-            # nan handling
-            df = df.replace(-9999, np.nan)
-
-            df = df.dropna()
-
-            # true value
-            df['sig'] = df['sig'].div(100)
-            df['inc'] = df['inc'].div(100)
-
-            # convert to radian
-            df['inc'] = np.deg2rad(df['inc'])
-
-            # sort by index
-            df.sort_index(inplace=True)
-
-            try:
-                df = inpdata_inc_average(df)
-            except Exception as e:
-                print(get_worker_id(), "inpdata_inc_average failed!", e)
-                continue
-
-            # -----------------------------------------
-
-            if ndvi_stack:
-                ndvi_list = []
-                for time in time_ndvi_list:
-                    idx_ndvi = time_ndvi_list.index(time)
-                    ndvi_list.append([time, np.mean(data_ndvi_list[idx_ndvi])])
-
-                df_ndvi = pd.DataFrame(ndvi_list)
-                df_ndvi.columns = ['time', 'ndvi']
-
-                # nan handling
-                df_ndvi = df_ndvi.replace(list(range(251, 256)), np.nan)
-
-                df_ndvi = df_ndvi.dropna()
-
-                # convert to physical value
-                df_ndvi['ndvi'] = df_ndvi['ndvi'] / 250 - 0.08
-
-                # set index
-                df_ndvi = df_ndvi.set_index('time')
-
-                # sort by index
-                df_ndvi.sort_index(inplace=True)
-            else:
-                df_ndvi = None
-
-            out_dict = {'dataset': df, 'df_ndvi': df_ndvi, '_fnevals_input': None,
-                        'c': col, 'r': row, 'outdir': tmp_dir}
-
-            # print('processed: ', px, line, datetime.now())
-            parallelfunc(out_dict)
-
-        # move temp folder into output dir
-        move_dir(tmp_dir, output_dir)
+            pool = mp.Pool(mp_threads)
+            pool.map(prepare_data_mp, process_list)
+            pool.close()
+            pool = None
+            move_dir(tmp_dir, output_dir)  # move whole processed line to output dir
 
 
 def main(args, test_vsc_param=False):
@@ -233,7 +283,7 @@ def main(args, test_vsc_param=False):
     else:
         test_corner = int(test_corner)
         upper_left_index = cfg['PARAMETER']['upper_left_index'].split(',')
-        upper_left_index = list(map(int, upper_left_index))
+        col_test, row_test = list(map(int, upper_left_index))
 
     # take total array number and array number from arg
     if args.arraynumber:
@@ -248,26 +298,41 @@ def main(args, test_vsc_param=False):
 
     pixels_per_side = int(tif_size / block_size)
 
-    # get processed files:
+    # get processed lines:
     processed = get_processed_list(out_dir)
 
     # prepare lines list
     list_all_lines = []
     if test_corner:
-        # TODO: make test_corner work again (or probably test line)
-        raise ValueError("test_corner does not work yet")
-        pass
+        row_to_proc = range(row_test, row_test + test_corner)
+        col_to_proc = range(col_test, col_test + test_corner)
+        for line in row_to_proc:
+            # line filtering
+            list_all_lines.append(line)
+            # column filtering
+            for col_test in range(pixels_per_side):
+                if col_test not in list(col_to_proc):
+                    processed.append(str(col_test) + '_' + str(line))
+    # process full tile (all the lines in tile)
     else:
         for line in range(pixels_per_side):
-            # condition: only add line to processing list if "_line_" occurences less than 1000
-            if get_str_occ(processed, '_' + str(line)) < 1000:
-                list_all_lines.append(line)
-            else:
-                print(line, "has been fully processed, excluding..")
+            list_all_lines.append(line)
 
+    # distributing to VSC computing nodes, if run on single machine, total_arr_number should be 1
     list_to_process_all = chunkIt(list_all_lines, total_arr_number)  # list of 5 lists, each list 200 line (1000/5)
-    list_to_process_this_node = list_to_process_all[
-        arr_number - 1]  # e.g array number 1 will take list_to_process_all[0]
+    list_to_process_this_node = list_to_process_all[arr_number - 1]  # e.g array number 1 take list_to_process_all[0]
+
+    if not test_corner:
+        # remove fully processed line only test_corner is not active
+        # condition: only add line to processing list if "_line_" occurences less than 1000
+        list_to_process_this_node_filt = []
+        for line in list_to_process_this_node:
+            if get_str_occ(processed, '_' + str(line)) >= pixels_per_side:
+                print(line, "was fully processed, removing..")
+            else:
+                list_to_process_this_node_filt.append(line)
+        list_to_process_this_node = list_to_process_this_node_filt
+        list_to_process_this_node_filt = None
 
     if test_vsc_param:
         # print out test parameters
@@ -285,62 +350,29 @@ def main(args, test_vsc_param=False):
 
     else:
         # single thread processing
-        if mp_threads in [0, 1]:
-            read_stack_line(sig0_dir=sig0_dir,
-                            plia_dir=plia_dir,
-                            block_size=block_size,
-                            line_list=list_to_process_this_node,
-                            output_dir=out_dir,
-                            ndvi_dir=ndvi_dir,
-                            orbit_direction=orbit_direction,
-                            processed=processed,
-                            tif_size=tif_size)
-        else:
-            # multiprocessing
-            process_list = []
-            # chunk the line list into smaller lists for processing
-            # list_to_process_node_chunked = chunkIt(list_to_process_this_node, mp_threads * 2)
-            for line in list_to_process_this_node:
-                process_dict = {}
-                process_dict['sig0_dir'] = sig0_dir
-                process_dict['plia_dir'] = plia_dir
-                process_dict['block_size'] = block_size
-                process_dict['line'] = [line]  # give as a list to avoid error in the loop
-                process_dict['output_dir'] = out_dir
-                process_dict['ndvi_dir'] = ndvi_dir
-                process_dict['orbit_direction'] = orbit_direction
-                process_dict['processed'] = processed
-                process_dict['tif_size'] = tif_size
-                process_list.append(process_dict)
-
-            print("Node:", arr_number, "/", total_arr_number, "start the MP...:", datetime.now())
-            print('Target: process ', len(process_list), 'lines...')
-            pool = mp.Pool(mp_threads)
-            pool.map(read_stack_line_mp, process_list)
-            pool.close()
-
-
-def read_stack_line_mp(process_dict):
-    read_stack_line(sig0_dir=process_dict['sig0_dir'],
-                    plia_dir=process_dict['plia_dir'],
-                    block_size=process_dict['block_size'],
-                    line_list=process_dict['line'],
-                    output_dir=process_dict['output_dir'],
-                    ndvi_dir=process_dict['ndvi_dir'],
-                    orbit_direction=process_dict['orbit_direction'],
-                    processed=process_dict['processed'],
-                    tif_size=process_dict['tif_size'])
+        print("Node:", arr_number, "/", total_arr_number, datetime.now())
+        print('Target: process ', len(list_to_process_this_node), 'lines...')
+        read_stack_line(sig0_dir=sig0_dir,
+                        plia_dir=plia_dir,
+                        block_size=block_size,
+                        line_list=list_to_process_this_node,
+                        output_dir=out_dir,
+                        ndvi_dir=ndvi_dir,
+                        orbit_direction=orbit_direction,
+                        processed=processed,
+                        tif_size=tif_size,
+                        mp_threads=mp_threads)
 
 
 if __name__ == '__main__':
     import sys
 
-    # # comment those line if you're working on the vsc
-    # sys.argv.append("config/config_tle.ini")
-    # sys.argv.append("-totalarraynumber")
-    # sys.argv.append("2")
-    # sys.argv.append("-arraynumber")
-    # sys.argv.append("1")
+    # comment those lines if you're working on the VSC
+    sys.argv.append("config/config_tle.ini")
+    sys.argv.append("-totalarraynumber")
+    sys.argv.append("1")
+    sys.argv.append("-arraynumber")
+    sys.argv.append("1")
 
     print("-------------START------------", datetime.now())
     main(sys.argv[1:], test_vsc_param=False)

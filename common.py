@@ -8,10 +8,10 @@ from configparser import ConfigParser
 import argparse
 import multiprocessing as mp
 import shutil
-import copy
 import cloudpickle
 from datetime import datetime
 import tempfile
+import numpy as np
 
 
 def get_worker_id():
@@ -24,10 +24,17 @@ def get_worker_id():
     try:
         if "Main" in str(mp.current_process()):
             return ("Single thread:")
-        return str(mp.current_process())[21:30]
+        return str(mp.current_process())
     except Exception as e:
         print(e)
 
+
+def prepare_index_array(time_list, data_array):
+    px_time = np.empty(data_array.shape, dtype=object)
+    for time in time_list:
+        idx = time_list.index(time)
+        px_time[idx] = time
+    return px_time
 
 def make_tmp_dir(sub_folder_name):
     '''
@@ -61,11 +68,21 @@ def move_dir(tmp_dir, outdir):
     -------
 
     '''
-    try:
-        shutil.copy(tmp_dir, outdir)
-        shutil.rmtree(tmp_dir)
-    except Exception as e:
-        print(e)
+    out_path = os.path.join(outdir, os.path.basename(tmp_dir))
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+    copytree(tmp_dir, out_path)
+    shutil.rmtree(tmp_dir)
+
+
+def copytree(src, dst, symlinks=False, ignore=None):
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            shutil.copytree(s, d, symlinks, ignore)
+        else:
+            shutil.copy2(s, d)
 
 
 def chunkIt(seq, num):
@@ -189,7 +206,19 @@ def get_processed_list(out_dir):
         processed_dump += [fil.replace('.dump', '') for fil in files if fil.endswith(".dump")]
     return processed_dump
 
+
 def get_str_occ(list, str):
+    '''
+    get string occurences in list of strings
+    Parameters
+    ----------
+    list: list of str
+    str: str
+
+    Returns
+    -------
+
+    '''
     return sum(str in s for s in list)
 
 
@@ -228,19 +257,18 @@ def parallelfunc(import_dict):
         # manual_dyn_df = pd.DataFrame(dataset.index.month.values.flatten(),
         #                              dataset.index, columns=['VOD'])
         defdict = {
-                    'bsf'   : [False, 0.01, None,  ([0.01], [.25])],
-                    'v'     : [False, 0.4, None, ([0.01], [.4])],
-                    #'v2'    : [True, 1., None, ([0.5], [1.5])],
-                    'v2'    : [True, 1., None, ([0.1], [1.5])],
-                    #'VOD'   : [False, VOD_input.values.flatten()],
-                    #'VOD'   : [True, 0.25,'30D', ([0.01], [1.])],
-                    'VOD'   : [False,  ((VOD_input - VOD_input.min())/(VOD_input - VOD_input.min()).max()).values.flatten()],
-                    #'SM'    : [True, 0.25,  'D',   ([0.05], [0.5])],
-                    'SM'    : [True, 0.1,  'D',   ([0.01], [0.2])],
-                    'frac'  : [True, 0.5, None,  ([0.01], [1.])],
-                    'omega' : [True, 0.3,  None,  ([0.05], [0.6])],
-                    }
-
+            'bsf': [False, 0.01, None, ([0.01], [.25])],
+            'v': [False, 0.4, None, ([0.01], [.4])],
+            # 'v2'    : [True, 1., None, ([0.5], [1.5])],
+            'v2': [True, 1., None, ([0.1], [1.5])],
+            # 'VOD'   : [False, VOD_input.values.flatten()],
+            # 'VOD'   : [True, 0.25,'30D', ([0.01], [1.])],
+            'VOD': [False, ((VOD_input - VOD_input.min()) / (VOD_input - VOD_input.min()).max()).values.flatten()],
+            # 'SM'    : [True, 0.25,  'D',   ([0.05], [0.5])],
+            'SM': [True, 0.1, 'D', ([0.01], [0.2])],
+            'frac': [True, 0.5, None, ([0.01], [1.])],
+            'omega': [True, 0.3, None, ([0.05], [0.6])],
+        }
 
     _fnevals_input = import_dict['_fnevals_input']
 
@@ -292,6 +320,7 @@ def parallelfunc(import_dict):
     with open(os.path.join(outdir, str(c) + '_' + str(r) + '.dump'), 'wb') as file:
         cloudpickle.dump(fit, file)
         # return fit
+
 
 if __name__ == '__main__':
     # print(get_processed_list('/tmp'))
