@@ -323,10 +323,14 @@ def main(args, test_vsc_param=False):
     if not test_corner:
         # remove fully processed line only test_corner is not active
         # condition: only add line to processing list if "_line_" occurences less than 1000
+        list_to_process_this_node_filt = []
         for line in list_to_process_this_node:
             if get_str_occ(processed, '_' + str(line)) >= pixels_per_side:
                 print(line, "was fully processed, removing..")
-                list_to_process_this_node.remove(line)
+            else:
+                list_to_process_this_node_filt.append(line)
+        list_to_process_this_node = list_to_process_this_node_filt
+        list_to_process_this_node_filt = None
 
     if test_vsc_param:
         # print out test parameters
