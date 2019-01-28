@@ -158,7 +158,8 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
             del times_sig0[idx_sig0_no_plia]
             del filelist_sig0[idx_sig0_no_plia]
             print("Warning! The scene in this date ", time, " doesn't have the correspond plia. Removing...")
-    # sort
+
+    # sort those lists. After sorting, times_plia and times_sig0 must be equal!
     filelist_plia.sort()
     times_plia.sort()
     filelist_sig0.sort()
@@ -171,28 +172,30 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                 filelist_plia[idx])[1:16]:
             raise ValueError("index is wrong!")
 
-    # read ndvi to virtual stack
+    # read ndvi to virtual stack, write the vrt to VSC ram disk
     if ndvi_dir:
         ndvi_stack = create_imagestack_dataset(name=random_name + 'ndvi', filelist=filelist_ndvi, times=times_ndvi,
                                                nodata=-9999)
 
-    # read sig0 to virtual stack
+    # read sig0 to virtual stack, write the vrt to VSC ram disk
     sig_stack = create_imagestack_dataset(name=random_name + 'SIG', filelist=filelist_sig0, times=times_sig0,
                                           nodata=-9999)
-    # read plia to virtual stack
+    # read plia to virtual stack, write the vrt to VSC ram disk
     plia_stack = create_imagestack_dataset(name=random_name + 'LIA', filelist=filelist_plia, times=times_plia,
                                            nodata=-9999)
     # read sig and plia blocks
 
     for row in line_list:
-        # make temp dir in ram disk VSC
+        # make temp dir in VSC's ram disk
         tmp_dir = make_tmp_dir(str(row))
         print('read sig0 and plia stack... line:', row, datetime.now())
+        # read sig0 and plia line (col: 0 - tifsize, row: row*blocksize - (row+1)*blocksize)
         time_sig0_list, data_sig0_list = sig_stack.read_ts(0, row * block_size, tif_size, block_size)
         time_plia_list, data_plia_list = plia_stack.read_ts(0, row * block_size, tif_size, block_size)
 
         if ndvi_stack:
             print('read ndvi stack..., line:', row, datetime.now())
+            # read ndvi line (col: 0 - tifsize, row: row*blocksize - (row+1)*blocksize)
             time_ndvi_list, data_ndvi_list = ndvi_stack.read_ts(0, row * block_size, tif_size, block_size)
         else:
             time_ndvi_list = None
@@ -214,7 +217,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                                  col=col,
                                  row=row,
                                  block_size=block_size,
-                                 out_dir=output_dir)
+                                 out_dir=output_dir)  # write output file directly to output_dir
 
 
         else:
@@ -226,6 +229,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                     # print(str(col) + '_' + str(row) + 'is processed')
                     continue
                 else:
+                    # prepare mp input dictionaries
                     process_dict = {}
                     process_dict['time_sig0_list'] = time_sig0_list
                     process_dict['data_sig0_list'] = data_sig0_list
@@ -238,11 +242,13 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                     process_dict['out_dir'] = tmp_dir  # write output file to tmp_dir
                     process_list.append(process_dict)
 
+            # start the pool
             pool = mp.Pool(mp_threads)
             pool.map(prepare_data_mp, process_list)
             pool.close()
             pool = None
-            move_dir(tmp_dir, output_dir)  # move whole processed line to output dir
+            # move whole processed line from VSC's ram disk to output dir
+            move_dir(tmp_dir, output_dir)
 
 
 def main(args, test_vsc_param=False):
@@ -349,7 +355,6 @@ def main(args, test_vsc_param=False):
         print('len_cr_list (px for this node)', len(list_to_process_this_node))
 
     else:
-        # single thread processing
         print("Node:", arr_number, "/", total_arr_number, datetime.now())
         print('Target: process ', len(list_to_process_this_node), 'lines...')
         read_stack_line(sig0_dir=sig0_dir,
@@ -367,12 +372,12 @@ def main(args, test_vsc_param=False):
 if __name__ == '__main__':
     import sys
 
-    # comment those lines if you're working on the VSC
-    sys.argv.append("config/config_tle.ini")
-    sys.argv.append("-totalarraynumber")
-    sys.argv.append("1")
-    sys.argv.append("-arraynumber")
-    sys.argv.append("1")
+    # # comment those lines if you're working on the VSC
+    # sys.argv.append("config/config_tle.ini")
+    # sys.argv.append("-totalarraynumber")
+    # sys.argv.append("1")
+    # sys.argv.append("-arraynumber")
+    # sys.argv.append("1")
 
     print("-------------START------------", datetime.now())
     main(sys.argv[1:], test_vsc_param=False)
