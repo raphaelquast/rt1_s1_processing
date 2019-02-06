@@ -191,7 +191,9 @@ def read_data(sig0_dir, plia_dir, block_size, feature_list, output_dir, ndvi_dir
                                                                 int(cstop - cstart))
 
             # create 3d mask for new 3d array
-            ndvi_value_masked = np.ma.array(data_ndvi_list, mask=arr3d_mask)
+            arr3d_mask_ndvi = np.zeros(data_ndvi_list.shape, dtype=bool)
+            arr3d_mask_ndvi[:, :, :] = bbox_array[np.newaxis, :, :] == 255
+            ndvi_value_masked = np.ma.array(data_ndvi_list, mask=arr3d_mask_ndvi)
 
             # change -9999 to masked, loop through time slice
             for i in range(ndvi_value_masked.shape[0]):
