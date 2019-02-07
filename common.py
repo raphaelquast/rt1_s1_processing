@@ -12,7 +12,7 @@ import cloudpickle
 from datetime import datetime
 import tempfile
 import numpy as np
-
+import pandas as pd
 
 def get_worker_id():
     '''
@@ -321,6 +321,61 @@ def parallelfunc(import_dict):
     with open(os.path.join(outdir, str(c) + '_' + str(r) + '.dump'), 'wb') as file:
         cloudpickle.dump(fit, file)
         # return fit
+
+
+    # get the ids
+    # TODO replace this with the id from import_dict!
+    site_id = 125  # import_dict['id']
+
+    # extract parameters for csv-output
+    # get the keys of the constant parameters
+    paramkeys = [key for key, val in defdict.items() if len(val) > 2 and val[0] is True and val[2] is None]
+    # get the keys of the temporally varying parameters
+    tskeys = [key for key, val in defdict.items() if len(val) > 2 and val[0] is True and val[2] is not None]
+    # extract results
+    csv_parameters = pd.DataFrame({key : val[0] for key, val in fit.result[6].items() if key in paramkeys}, index=[site_id])
+    csv_timeseries = pd.DataFrame({key : val for key, val in fit.result[6].items() if key in tskeys}, index=fit.index)
+
+    # generate csv-files
+    csv_folder_path = os.path.join(outdir, 'csv_output')
+    # generate csv_output folder if it does not exist
+    if not os.path.exists(csv_folder_path):
+        os.mkdir(csv_folder_path)
+
+    # generate parameter-csv_files:
+    for key, val in csv_parameters.items():
+        vsv_filepath = os.path.join(csv_folder_path, key + '.csv')
+        if not os.path.exists(vsv_filepath):
+            with open(vsv_filepath, 'w') as file:
+                val.to_csv(file, header=True, index_label='id')
+        else:
+            with open(vsv_filepath, 'a') as file:
+                val.to_csv(file, header=False)
+
+    # generate timeseries-csv_files:
+    for key, val in csv_timeseries.items():
+        ts_folderpath = os.path.join(csv_folder_path, key)
+        if not os.path.exists(ts_folderpath):
+            os.mkdir(ts_folderpath)
+
+        for time_key, time_val in val.items():
+
+            ts_filepath = os.path.join(ts_folderpath,
+                                       pd.datetime.strftime(time_key, format='%Y-%m-%d') + '.csv')
+
+            if not os.path.exists(ts_filepath):
+                with open(ts_filepath, 'w') as file:
+                    pd.Series([time_val], [site_id], name=key).to_csv(file, header=True, index_label='id')
+            else:
+                with open(ts_filepath, 'a') as file:
+                    pd.Series([time_val], [site_id], name=key).to_csv(file)
+
+
+
+
+
+
+
 
 
 if __name__ == '__main__':
