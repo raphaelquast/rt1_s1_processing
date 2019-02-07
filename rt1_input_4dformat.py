@@ -12,15 +12,15 @@ import numpy as np
 from rt1_processing_funcs_juhuu import inpdata_inc_average
 import random, string
 import multiprocessing as mp
-from common import get_worker_id,chunkIt, parse_args, read_cfg, parallelfunc
-from common import get_processed_list, get_str_occ
+from common import get_worker_id, chunkIt, parse_args, read_cfg, parallelfunc
 import rasterio
 from rasterio.mask import mask
 import fiona
 from common import prepare_index_array
 
-def read_data(sig0_dir, plia_dir, block_size, feature_list, output_dir, ndvi_dir=None, orbit_direction='',
-              tif_size=10000, ref_image='/home/tle/temp/E044N021T1_ref.tif', shp_file_base=''):
+
+def read_data(sig0_dir, plia_dir, feature_list, output_dir, ndvi_dir=None, orbit_direction='',
+              ref_image='/home/tle/temp/E044N021T1_ref.tif', shp_file_base=''):
     '''
     Read sig0 and plia rasters stack into a virtual raster stack, then read the time-series block-by block
     Parameters
@@ -29,8 +29,6 @@ def read_data(sig0_dir, plia_dir, block_size, feature_list, output_dir, ndvi_dir
         directory of sig0 tif images
     plia_dir: str
         directory of plia tif images
-    block_size: int
-        block size: the size of the block. e.g if you would like to take 100x100m block, blocksize is 10
     Returns
     -------
     '''
@@ -96,7 +94,6 @@ def read_data(sig0_dir, plia_dir, block_size, feature_list, output_dir, ndvi_dir
                 filelist_plia[idx])[1:16]:
             raise ValueError("index is wrong!")
 
-
     # read ndvi to virtual stack
     if ndvi_dir:
         ndvi_stack = create_imagestack_dataset(name=random_name + 'ndvi', filelist=filelist_ndvi, times=times_ndvi,
@@ -104,7 +101,7 @@ def read_data(sig0_dir, plia_dir, block_size, feature_list, output_dir, ndvi_dir
 
     # read sig0 to virtual stack
     sig0_stack = create_imagestack_dataset(name=random_name + 'SIG', filelist=filelist_sig0, times=times_sig0,
-                                          nodata=-9999)
+                                           nodata=-9999)
     # read plia to virtual stack
     plia_stack = create_imagestack_dataset(name=random_name + 'LIA', filelist=filelist_plia, times=times_plia,
                                            nodata=-9999)
@@ -136,13 +133,11 @@ def read_data(sig0_dir, plia_dir, block_size, feature_list, output_dir, ndvi_dir
         # in_array[cstart:cstop, rstart:rstop] = 1
         bbox_array = mask_array[cstart:cstop, rstart:rstop]
 
-
         # read 3d array based on bounding box location above
         time_sig0_list, data_sig0_list = sig0_stack.read_ts(int(rstart), int(cstart), int(rstop - rstart),
-                                        int(cstop - cstart))
+                                                            int(cstop - cstart))
         time_plia_list, data_plia_list = plia_stack.read_ts(int(rstart), int(cstart), int(rstop - rstart),
-                                        int(cstop - cstart))
-
+                                                            int(cstop - cstart))
 
         # create 3d mask for new 3d array
         arr3d_mask = np.zeros(data_sig0_list.shape, dtype=bool)
@@ -155,9 +150,8 @@ def read_data(sig0_dir, plia_dir, block_size, feature_list, output_dir, ndvi_dir
             sig0_value_masked[i].mask[sig0_value_masked[i].data == -9999] = True
             plia_value_masked[i].mask[plia_value_masked[i].data == -9999] = True
 
-
-        px_sig0 = sig0_value_masked.filled(-9999) # todo remove hardcode here
-        px_plia = plia_value_masked.filled(-9999) # todo remove hardcode here
+        px_sig0 = sig0_value_masked.filled(-9999)  # todo remove hardcode here
+        px_plia = plia_value_masked.filled(-9999)  # todo remove hardcode here
         # prepare index array
         px_time = prepare_index_array(time_sig0_list, px_sig0)
 
@@ -184,7 +178,7 @@ def read_data(sig0_dir, plia_dir, block_size, feature_list, output_dir, ndvi_dir
             print(get_worker_id(), "inpdata_inc_average failed!", e)
             return
 
-        #TODO: NDVI
+        # TODO: NDVI
         if ndvi_stack:
             print('read ndvi stack...:', datetime.now())
             time_ndvi_list, data_ndvi_list = ndvi_stack.read_ts(int(rstart), int(cstart), int(rstop - rstart),
@@ -198,7 +192,6 @@ def read_data(sig0_dir, plia_dir, block_size, feature_list, output_dir, ndvi_dir
             # change -9999 to masked, loop through time slice
             for i in range(ndvi_value_masked.shape[0]):
                 ndvi_value_masked[i].mask[ndvi_value_masked[i].data == -9999] = True
-
 
             px_ndvi = ndvi_value_masked.filled(-9999)  # todo remove hardcode here
 
@@ -222,9 +215,8 @@ def read_data(sig0_dir, plia_dir, block_size, feature_list, output_dir, ndvi_dir
         else:
             df_ndvi = None
 
-
         out_dict = {'dataset': df, 'df_ndvi': df_ndvi, '_fnevals_input': None,
-                    'c':shp_file_base, 'r': str(feature_id), 'outdir': output_dir}
+                    'c': shp_file_base, 'r': str(feature_id), 'outdir': output_dir}
 
         parallelfunc(out_dict)
 
@@ -237,9 +229,6 @@ def read_data(sig0_dir, plia_dir, block_size, feature_list, output_dir, ndvi_dir
         #                    crs=equi7_eu_crs,
         #                    transform=out_transform, nodata=255) as dst:
         #     dst.write(in_array, 1)
-
-        print('pass')
-
 
 
 def main(args, test_vsc_param=False):
@@ -287,10 +276,6 @@ def main(args, test_vsc_param=False):
 
     pixels_per_side = int(tif_size / block_size)
 
-
-
-    # TODO modify from here:
-    # loop through features
     feature_list = []
     with fiona.open(shp_file, "r") as shapefile:
         no_features = len(shapefile)
@@ -307,7 +292,7 @@ def main(args, test_vsc_param=False):
     list_to_process_this_node = list_to_process_all[arr_number - 1]  # e.g array number 1 take list_to_process_all[0]
 
     # divide list_procss_this_node into a list of lists
-    list_to_process_this_node = chunkIt(list_to_process_this_node, 50) # TODO remove hardcode here
+    list_to_process_this_node = chunkIt(list_to_process_this_node, 50)  # TODO remove hardcode here
 
     if test_vsc_param:
         # # print out test parameters
