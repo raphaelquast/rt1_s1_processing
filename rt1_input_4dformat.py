@@ -316,12 +316,10 @@ def main(args, test_vsc_param=False):
             print("single thread processing")
             read_data(sig0_dir=sig0_dir,
                       plia_dir=plia_dir,
-                      block_size=block_size,
                       feature_list=feature_list,
                       output_dir=out_dir,
                       ndvi_dir=ndvi_dir,
                       orbit_direction=orbit_direction,
-                      tif_size=tif_size,
                       ref_image=ref_image,
                       shp_file_base=shp_file_base)
         else:
@@ -333,12 +331,10 @@ def main(args, test_vsc_param=False):
                 process_dict = {}
                 process_dict['sig0_dir'] = sig0_dir
                 process_dict['plia_dir'] = plia_dir
-                process_dict['block_size'] = block_size
                 process_dict['feature_list'] = feature_list_node
                 process_dict['output_dir'] = out_dir
                 process_dict['ndvi_dir'] = ndvi_dir
                 process_dict['orbit_direction'] = orbit_direction
-                process_dict['tif_size'] = tif_size
                 process_dict['ref_image'] = ref_image
                 process_dict['shp_file_base'] = shp_file_base
                 process_list.append(process_dict)
@@ -353,12 +349,10 @@ def main(args, test_vsc_param=False):
 def read_data_mp(process_dict):
     read_data(sig0_dir=process_dict['sig0_dir'],
               plia_dir=process_dict['plia_dir'],
-              block_size=process_dict['block_size'],
               feature_list=process_dict['line'],
               output_dir=process_dict['output_dir'],
               ndvi_dir=process_dict['ndvi_dir'],
-              orbit_direction=process_dict['orbit_direction'],
-              tif_size=process_dict['tif_size'])
+              orbit_direction=process_dict['orbit_direction'])
 
 
 if __name__ == '__main__':

@@ -325,7 +325,7 @@ def parallelfunc(import_dict):
 
     # get the ids
     # TODO replace this with the id from import_dict!
-    site_id = 125  # import_dict['id']
+    site_id = import_dict['r']
 
     # extract parameters for csv-output
     # get the keys of the constant parameters
@@ -337,7 +337,7 @@ def parallelfunc(import_dict):
     csv_timeseries = pd.DataFrame({key : val for key, val in fit.result[6].items() if key in tskeys}, index=fit.index)
 
     # generate csv-files
-    csv_folder_path = os.path.join(outdir, 'csv_output')
+    csv_folder_path = os.path.join(outdir, 'csv_output' + str(c))
     # generate csv_output folder if it does not exist
     if not os.path.exists(csv_folder_path):
         os.mkdir(csv_folder_path)
