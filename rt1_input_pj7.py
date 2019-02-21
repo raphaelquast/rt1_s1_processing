@@ -9,9 +9,7 @@ from ImageStack import create_imagestack_dataset
 from datetime import datetime
 import pandas as pd
 import numpy as np
-from rt1_processing_funcs_juhuu import inpdata_inc_average
 import random, string
-from scipy.signal import savgol_filter
 from common import chunkIt, parse_args, read_cfg, parallelfunc
 
 def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=None, orbit_direction=''):
@@ -103,6 +101,7 @@ def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=Non
         time_sig0_list, data_sig0_list = sig_stack.read_ts(c * block_size, r * block_size, block_size, block_size)
         time_plia_list, data_plia_list = plia_stack.read_ts(c * block_size, r * block_size, block_size, block_size)
         final_list = []
+
         for time in time_sig0_list:
             idx_sig0 = time_sig0_list.index(time)
             idx_plia = time_plia_list.index(time)
@@ -112,7 +111,6 @@ def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=Non
                     sig0_value = data_sig0_list[idx_sig0][row][col]
                     plia_value = data_plia_list[idx_plia][row][col]
                     final_list.append([time, sig0_value, plia_value])
-
         df = pd.DataFrame(final_list)
         df.columns = ['time', 'sig', 'inc']
 
@@ -134,10 +132,6 @@ def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=Non
         # sort by index
         df.sort_index(inplace=True)
 
-        try:
-            df = inpdata_inc_average(df)
-        except Exception:
-            continue
         # -----------------------------------------
 
         if ndvi_stack:
@@ -169,6 +163,7 @@ def read_stack(sig0_dir, plia_dir, block_size, cr_list, output_dir, ndvi_dir=Non
         # TODO: pass ndvi df to out_dict
         out_dict = {'dataset': df, 'df_ndvi': df_ndvi, '_fnevals_input': None,
                     'c': c, 'r': r, 'outdir': output_dir}
+
         parallelfunc(out_dict)
 
 
