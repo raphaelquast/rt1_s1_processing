@@ -14,6 +14,91 @@ import tempfile
 import numpy as np
 import pandas as pd
 
+def inpdata_inc_average(inpdata, round_digits=0, returnall = False):
+    '''
+    A function to average the data based on a given number of digits for the
+    incidence-angle information ('inc' column of inpdata)
+
+    Parameters:
+
+    inpdata : pandas.DataFrame
+        a dataframe with columns 'inc' and 'sig' and a datetime-index
+    round_digits : int (default = 0)
+        the number of digits to which the incidence-angles will
+        be rounded (input of np.round() )
+    returnall : bool (default = False)
+        indicator if all generated data should be returned or only
+        the averaged inpdata
+
+
+    Returns:
+
+    inpdata_new : pandas.DataFrame
+        a dataframe with the 'sig' values averaged based on
+        the incidence-angles which have been rounded with respect to the
+        'round_digits' parameter
+    index : array
+        only returned if returnall == True !
+
+        the datetime-index of the unique incidence-angle values
+    meanuniquesigs : array
+        only returned if returnall == True !
+
+        averaged sig0 values corresponding to the rounded incidence-angles
+    uniquesigs : array
+        only returned if returnall == True !
+
+        all sig0 values corresponding to the rounded incidence-angles
+        (call signature: uniquesigs[day][#average incidence-angle][#measurement])
+
+    uniqueinc : array
+        only returned if returnall == True !
+
+        all (rounded) incidence-angle values of the corresponding day
+        (call signature: uniqueinc[day][#average incidence-angle])
+    '''
+
+    asdfinc = np.rad2deg(inpdata['inc']).resample('D').apply(np.array).reindex(inpdata.resample('D').mean().dropna().index)
+    index = asdfinc.index
+    asdfinc = asdfinc.values.flatten()
+    asdfsig = inpdata['sig'].resample('D').apply(np.array).reindex(inpdata.resample('D').mean().dropna().index).values.flatten()
+    # mask nan-values
+    nanmask = [np.where(~np.isnan(i)) for i in asdfinc]
+
+    asdfinc = np.array([np.round(val[nanmask[i]], round_digits) for i, val in enumerate(asdfinc)])
+    asdfsig = np.array([val[nanmask[i]] for i, val in enumerate(asdfsig)])
+
+    uniques = np.array([np.unique(i, return_inverse=True) for i in asdfinc])
+
+    uniqueinc = uniques[:,0]
+    unique_index = uniques[:,1]
+
+    uniquesigs = []
+    for i, sigvals in enumerate(asdfsig):
+        uniquesigs_day = []
+        for unique_id in np.unique(unique_index[i]):
+            uniquesigs_day += [sigvals[np.where(unique_index[i] == unique_id)]]
+        uniquesigs += [np.array(uniquesigs_day)]
+    #uniquesigs = np.array(uniquesigs)
+
+    meanuniquesigs = []
+    for i in uniquesigs:
+        meanuniquesigs_day = []
+        for j in i:
+            meanuniquesigs_day += [np.mean(j)]
+        meanuniquesigs += [np.array(meanuniquesigs_day)]
+
+    newindex = np.concatenate([np.array([ind]*len(uniqueinc[i])) for i, ind in enumerate(index)])
+    inpdata_new = pd.DataFrame({'inc':np.deg2rad(np.concatenate(uniqueinc)), 'sig':np.concatenate(meanuniquesigs)}, index=newindex)
+
+    if returnall is True:
+        return inpdata_new, index, meanuniquesigs, uniquesigs, uniqueinc
+    else:
+        return inpdata_new
+
+
+
+
 def get_worker_id():
     '''
     return multiprocessing worker ID
@@ -221,7 +306,6 @@ def get_str_occ(list, str):
     '''
     return sum(str in s for s in list)
 
-
 def parallelfunc(import_dict):
     import os
     os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -229,94 +313,72 @@ def parallelfunc(import_dict):
     os.environ['OMP_NUM_THREADS'] = '1'
     os.environ['NUMEXPR_NUM_THREADS'] = '1'
 
+    from rt1.rtfits import Fits
+    import model_definition
     from scipy.signal import savgol_filter
 
-    c = import_dict['c']
-    r = import_dict['r']
-    outdir = import_dict['outdir']
+    if import_dict.get('refit', False) is True:
+        print('refitting result')
+        c = import_dict['c']
+        r = import_dict['r']
+        outdir = import_dict['outdir']
+        dataset = import_dict['dataset']
+        if model_definition.defdict['VOD'][1] == 'auxiliary' and model_definition.defdict['VOD'][0] is False:
+            model_definition.defdict['VOD'][1] = import_dict['VOD']
+    else:
+        c = import_dict['c']
+        r = import_dict['r']
+        outdir = import_dict['outdir']
 
-    # get the sig0 dataset
-    dataset = import_dict['dataset']
-    # convert it to linear units
-    dataset['sig'] = 10 ** (dataset['sig'] / 10.)
+        # get the sig0 dataset
+        dataset = import_dict['dataset']
+        # convert it to linear units
+        dataset['sig'] = 10 ** (dataset['sig'] / 10.)
 
-    df_ndvi = import_dict['df_ndvi']
-    # transform ndvi dataset if available
-    if df_ndvi is not None:
-        VOD_input = df_ndvi.resample('D').interpolate(method='nearest')
-        # get a smooth curve
-        # VOD_input = VOD_input.rolling(window=60, center=True, min_periods=1).mean()
-        VOD_input = VOD_input.clip_lower(0).apply(savgol_filter, window_length=61, polyorder=2).clip_lower(0)
-        # reindex to input-dataset
-        VOD_input = VOD_input.reindex(dataset.index.drop_duplicates()).dropna()
-        # ensure that there are no ngative-values appearing (possible due to rolling-mean and interpolation)
-        VOD_input = VOD_input.clip_lower(0)
-        # drop all measurements where no VOD estimates are available
-        dataset = dataset.loc[VOD_input.dropna().index]
+        #dataset.index = [pd.to_datetime(i.date()) for i in dataset.index]
 
-        # manual_dyn_df = pd.DataFrame(dataset.index.month.values.flatten(),
-        #                              dataset.index, columns=['VOD'])
-        defdict = {
-            'bsf'   : [False, 0.01, None,  ([0.01], [.25])],
-            'v'     : [False, 0.4, None, ([0.01], [.4])],
-            #'v2'    : [True, 1., None, ([0.5], [1.5])],
-            'v2'    : [True, 1., None, ([0.1], [1.5])],
-            'VOD'   : [False, VOD_input.values.flatten()],
-            #'VOD'   : [True, 0.25,'30D', ([0.01], [1.])],
-            #'VOD'   : [False,  ((VOD_input - VOD_input.min())/(VOD_input - VOD_input.min()).max()).values.flatten()],
-            #'SM'    : [True, 0.25,  'D',   ([0.05], [0.5])],
-            'SM'    : [True, 0.1,  'D',   ([0.01], [0.2])],
-            'frac'  : [True, 0.5, None,  ([0.01], [1.])],
-            'omega' : [True, 0.3,  None,  ([0.05], [0.6])],
-            }
+        dataset = inpdata_inc_average(dataset)
 
 
-    _fnevals_input = import_dict['_fnevals_input']
+        df_ndvi = import_dict['df_ndvi']
+        # transform ndvi dataset if available
+        if 'df_ndvi' in import_dict and model_definition.defdict['VOD'][1] == 'auxiliary' and model_definition.defdict['VOD'][0] is False:
+            VOD_input = df_ndvi.resample('D').interpolate(method='nearest')
+            # get a smooth curve
+            # VOD_input = VOD_input.rolling(window=60, center=True, min_periods=1).mean()
+            VOD_input = VOD_input.clip_lower(0).apply(savgol_filter, window_length=61, polyorder=2).clip_lower(0)
+            # reindex to input-dataset
+            VOD_input = VOD_input.reindex(dataset.index.drop_duplicates()).dropna()
+            # ensure that there are no ngative-values appearing (possible due to rolling-mean and interpolation)
+            VOD_input = VOD_input.clip_lower(0)
+            # drop all measurements where no VOD estimates are available
+            dataset = dataset.loc[VOD_input.dropna().index]
+
+            # manual_dyn_df = pd.DataFrame(dataset.index.month.values.flatten(),
+            #                              dataset.index, columns=['VOD'])
+
+            model_definition.defdict['VOD'][1] = VOD_input.values.flatten()
 
     try:
         print(get_worker_id(), 'processing site C:', c, ' R:', r, 'time:', datetime.now())
     except Exception:
         pass
 
-    from rt1.rtfits import Fits
 
-    def set_V_SRF(frac, omega, SM, VOD, v, v2, **kwargs):
-        from rt1.volume import HenyeyGreenstein
-        from rt1.surface import LinCombSRF, HG_nadirnorm
+    fit = Fits(sig0=model_definition.sig0, dB=model_definition.dB,
+               set_V_SRF=model_definition.set_V_SRF,
+               defdict=model_definition.defdict,
+               dataset=dataset)
 
-        SRFchoices = [
-            [frac, HG_nadirnorm(t=0.01, ncoefs=2, a=[-1., 1., 1.])],
-            [(1. - frac), HG_nadirnorm(t=0.6, ncoefs=10, a=[1., 1., 1.])]
-        ]
-        SRF = LinCombSRF(SRFchoices=SRFchoices, NormBRDF=SM)
 
-        V = HenyeyGreenstein(t=v, omega=omega, tau=v2 * VOD, ncoefs=8)
+#    if 'fnevals_input' in import_dict and import_dict['fnevals_input'] is not None:
+#        model_definition.fitset['fnevals_input'] = import_dict['fnevals_input']
+#    if import_dict['_fnevals_input'] is None:
+#        import_dict['_fnevals_input'] = fit.result[1]._fnevals
 
-        return V, SRF
-
-    fit = Fits(sig0=True, dB=False, dataset=dataset,
-               set_V_SRF=set_V_SRF,
-               defdict=defdict)
-
-    fitset = {'int_Q': False,
-              '_fnevals_input': _fnevals_input,
-              # least_squares kwargs:
-              'verbose': 1,  # verbosity of least_squares
-              # 'verbosity' : 1, # verbosity of monofit
-              'ftol': 1.e-5,
-              'gtol': 1.e-5,
-              'xtol': 1.e-5,
-              'max_nfev': 100,
-              'method': 'trf',
-              'tr_solver': 'lsmr',
-              'x_scale': 'jac'
-              }
-
-    fit.performfit(**fitset)
+    fit.performfit(**model_definition.fitset)
     fit.result[1].fn = 1
 
-    if import_dict['_fnevals_input'] is None:
-        import_dict['_fnevals_input'] = fit.result[1]._fnevals
 
     with open(os.path.join(outdir, str(c) + '_' + str(r) + '.dump'), 'wb') as file:
         cloudpickle.dump(fit, file)
@@ -329,9 +391,9 @@ def parallelfunc(import_dict):
 
     # extract parameters for csv-output
     # get the keys of the constant parameters
-    paramkeys = [key for key, val in defdict.items() if len(val) > 2 and val[0] is True and val[2] is None]
+    paramkeys = [key for key, val in model_definition.defdict.items() if len(val) > 2 and val[0] is True and val[2] is None]
     # get the keys of the temporally varying parameters
-    tskeys = [key for key, val in defdict.items() if len(val) > 2 and val[0] is True and val[2] is not None]
+    tskeys = [key for key, val in model_definition.defdict.items() if len(val) > 2 and val[0] is True and val[2] is not None]
     # extract results
     csv_parameters = pd.DataFrame({key : val[0] for key, val in fit.result[6].items() if key in paramkeys}, index=[site_id])
     csv_timeseries = pd.DataFrame({key : val for key, val in fit.result[6].items() if key in tskeys}, index=fit.index)
@@ -369,14 +431,6 @@ def parallelfunc(import_dict):
             else:
                 with open(ts_filepath, 'a') as file:
                     pd.Series([time_val], [site_id], name=key).to_csv(file)
-
-
-
-
-
-
-
-
 
 if __name__ == '__main__':
     # print(get_processed_list('/tmp'))
