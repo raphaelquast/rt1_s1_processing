@@ -149,7 +149,7 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
 
     # raise a warning if number of sig0 and plia is not equal
     if len(times_sig0) != len(times_plia):
-        print("Warning! The number of sig0 and plia images is not equal")
+        print("Warning! The number of sig0 and plia images is not equal, filtering...")
 
     # check if there is any files in sig0 which the correspond plia doesn't exist
     times_sig0_new = []
@@ -164,8 +164,8 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                 idx_plia = times_plia.index(time_plia)
                 times_sig0_new.append(times_sig0[idx_sig0])
                 filelist_sig0_new.append(filelist_sig0[idx_sig0])
-                times_plia_new.append(times_sig0[idx_plia])
-                filelist_plia_new.append(filelist_sig0[idx_plia])
+                times_plia_new.append(times_plia[idx_plia])
+                filelist_plia_new.append(filelist_plia[idx_plia])
 
     times_sig0 = times_sig0_new
     filelist_sig0 = filelist_sig0_new
