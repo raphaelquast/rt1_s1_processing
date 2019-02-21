@@ -152,18 +152,39 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
         print("Warning! The number of sig0 and plia images is not equal")
 
     # check if there is any files in sig0 which the correspond plia doesn't exist
-    for time in times_sig0:
-        if time not in times_plia:
-            idx_sig0_no_plia = times_sig0.index(time)
-            del times_sig0[idx_sig0_no_plia]
-            del filelist_sig0[idx_sig0_no_plia]
-            print("Warning! The scene in this date ", time, " doesn't have the correspond plia. Removing...")
+    times_sig0_new = []
+    times_plia_new = []
+    filelist_sig0_new = []
+    filelist_plia_new = []
+    for time_sig0 in times_sig0:
+        for time_plia in times_plia:
+            if time_sig0 == time_plia:
+                # add to new lists
+                idx_sig0 = times_sig0.index(time_sig0)
+                idx_plia = times_plia.index(time_plia)
+                times_sig0_new.append(times_sig0[idx_sig0])
+                filelist_sig0_new.append(filelist_sig0[idx_sig0])
+                times_plia_new.append(times_sig0[idx_plia])
+                filelist_plia_new.append(filelist_sig0[idx_plia])
+
+    times_sig0 = times_sig0_new
+    filelist_sig0 = filelist_sig0_new
+    times_sig0_new = None
+    filelist_sig0_new = None
+
+    times_plia = times_plia_new
+    filelist_plia = filelist_plia_new
+    times_plia_new = None
+    filelist_plia_new = None
 
     # sort those lists. After sorting, times_plia and times_sig0 must be equal!
     filelist_plia.sort()
     times_plia.sort()
     filelist_sig0.sort()
     times_sig0.sort()
+
+    if times_sig0 != times_plia:
+        raise ValueError("times_sig0 must be equal to times_plia")
 
     # check index
     for time in times_sig0:
@@ -372,12 +393,12 @@ def main(args, test_vsc_param=False):
 if __name__ == '__main__':
     import sys
 
-    # # comment those lines if you're working on the VSC
-    # sys.argv.append("config/config_tle.ini")
-    # sys.argv.append("-totalarraynumber")
-    # sys.argv.append("1")
-    # sys.argv.append("-arraynumber")
-    # sys.argv.append("1")
+    # comment those lines if you're working on the VSC
+    sys.argv.append("config/config_tle.ini")
+    sys.argv.append("-totalarraynumber")
+    sys.argv.append("1")
+    sys.argv.append("-arraynumber")
+    sys.argv.append("1")
 
     print("-------------START------------", datetime.now())
     main(sys.argv[1:], test_vsc_param=False)
