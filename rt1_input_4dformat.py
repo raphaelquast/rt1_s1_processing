@@ -172,12 +172,6 @@ def read_data(sig0_dir, plia_dir, feature_list, output_dir, ndvi_dir=None, orbit
         # convert to radian
         df['inc'] = np.deg2rad(df['inc'])
 
-        try:
-            df = inpdata_inc_average(df)
-        except Exception as e:
-            print(get_worker_id(), "inpdata_inc_average failed!", e)
-            return
-
         # TODO: NDVI
         if ndvi_stack:
             print('read ndvi stack...:', datetime.now())
@@ -215,7 +209,7 @@ def read_data(sig0_dir, plia_dir, feature_list, output_dir, ndvi_dir=None, orbit
         else:
             df_ndvi = None
 
-        out_dict = {'dataset': df, 'df_ndvi': df_ndvi, '_fnevals_input': None,
+        out_dict = {'dataset': df, 'df_ndvi': df_ndvi,
                     'c': shp_file_base, 'r': str(feature_id), 'outdir': output_dir}
 
         parallelfunc(out_dict)
