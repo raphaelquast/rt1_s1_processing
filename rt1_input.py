@@ -9,7 +9,6 @@ from ImageStack import create_imagestack_dataset
 from datetime import datetime
 import pandas as pd
 import numpy as np
-from rt1_processing_funcs_juhuu import inpdata_inc_average
 import random, string
 import multiprocessing as mp
 from common import get_worker_id, move_dir, make_tmp_dir, chunkIt, parse_args, read_cfg, parallelfunc
@@ -36,6 +35,18 @@ def prepare_data(time_sig0_list, data_sig0_list, data_plia_list, time_ndvi_list,
     px_sig0 = data_sig0_list[:, :, col * block_size:(col + 1) * block_size]
     px_plia = data_plia_list[:, :, col * block_size:(col + 1) * block_size]
 
+#    import cloudpickle
+#    with open(rf"D:\USERS\rq\delete_me\{col}_{row}_px_plia_D.dump", 'wb') as file:
+#        cloudpickle.dump(px_plia, file)
+#    with open(rf"D:\USERS\rq\delete_me\{col}_{row}_px_sig0_D.dump", 'wb') as file:
+#        cloudpickle.dump(px_sig0, file)
+
+    # nan handling
+    px_sig0 = px_sig0/100.
+    px_plia = px_plia/100.
+    px_plia[px_plia==-9999] = np.nan
+    px_sig0[px_sig0==-9999] = np.nan
+
     # prepare index array
     px_time = prepare_index_array(time_sig0_list, px_sig0)
 
@@ -45,22 +56,16 @@ def prepare_data(time_sig0_list, data_sig0_list, data_plia_list, time_ndvi_list,
                       columns=['sig', 'inc'])
 
     # nan handling
-    df = df.replace(-9999, np.nan)
+#    df = df.replace(-9999, np.nan)
 
     df = df.dropna()
 
     # true value
-    df['sig'] = df['sig'].div(100)
-    df['inc'] = df['inc'].div(100)
+#    df['sig'] = df['sig'].div(100)
+#    df['inc'] = df['inc'].div(100)
 
     # convert to radian
     df['inc'] = np.deg2rad(df['inc'])
-
-    try:
-        df = inpdata_inc_average(df)
-    except Exception as e:
-        print(get_worker_id(), "inpdata_inc_average failed!", e)
-        return
 
     # -----------------------------------------
 
@@ -87,8 +92,7 @@ def prepare_data(time_sig0_list, data_sig0_list, data_plia_list, time_ndvi_list,
     else:
         df_ndvi = None
 
-    out_dict = {'dataset': df, 'df_ndvi': df_ndvi, '_fnevals_input': None,
-                'c': col, 'r': row, 'outdir': out_dir}
+    out_dict = {'dataset': df, 'df_ndvi': df_ndvi, 'c': col, 'r': row, 'outdir': out_dir}
 
     parallelfunc(out_dict)
 
@@ -206,9 +210,16 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                                            nodata=-9999)
     # read sig and plia blocks
 
+    if mp_threads not in [0, 1]:
+        pool = mp.Pool(mp_threads)
     for row in line_list:
+        # check if all files of the corresponding row have already been processed, if yes, skip the whole row
+        if set([str(col) + '_' + str(row) for col in range(int(tif_size / block_size))]).issubset(set(processed)):
+            print(f'skipping row {row} since all sites are already processed')
+            continue
+
         # make temp dir in VSC's ram disk
-        tmp_dir = make_tmp_dir(str(row))
+        #tmp_dir = make_tmp_dir(str(row))
         print('read sig0 and plia stack... line:', row, datetime.now())
         # read sig0 and plia line (col: 0 - tifsize, row: row*blocksize - (row+1)*blocksize)
         time_sig0_list, data_sig0_list = sig_stack.read_ts(0, row * block_size, tif_size, block_size)
@@ -260,16 +271,20 @@ def read_stack_line(sig0_dir, plia_dir, block_size, line_list, output_dir, ndvi_
                     process_dict['col'] = col
                     process_dict['row'] = row
                     process_dict['block_size'] = block_size
-                    process_dict['out_dir'] = tmp_dir  # write output file to tmp_dir
+                    process_dict['out_dir'] = output_dir  # write output file to tmp_dir
                     process_list.append(process_dict)
 
             # start the pool
-            pool = mp.Pool(mp_threads)
-            pool.map(prepare_data_mp, process_list)
-            pool.close()
-            pool = None
+            #pool = mp.Pool(mp_threads)
+            pool.map_async(prepare_data_mp, process_list)
+            print('reading finished for line:', row, datetime.now())
+
+            #pool.close()
+            #pool = None
             # move whole processed line from VSC's ram disk to output dir
-            move_dir(tmp_dir, output_dir)
+            #move_dir(tmp_dir, output_dir)
+    pool.close()
+    pool = None
 
 
 def main(args, test_vsc_param=False):
@@ -293,6 +308,7 @@ def main(args, test_vsc_param=False):
     plia_dir = cfg['PATH']['plia_dir']
     out_dir = cfg['PATH']['out_dir']
     ndvi_dir = cfg['PATH']['ndvi_dir']
+
     if ndvi_dir == 'None':
         ndvi_dir = None
 
@@ -394,7 +410,8 @@ if __name__ == '__main__':
     import sys
 
     # comment those lines if you're working on the VSC
-    sys.argv.append("config/config_tle.ini")
+    #sys.argv.append("config/config_tle.ini")
+    sys.argv.append(r"D:\USERS\rq\rt1_s1_processing\config\config_pr7.ini")
     sys.argv.append("-totalarraynumber")
     sys.argv.append("1")
     sys.argv.append("-arraynumber")
