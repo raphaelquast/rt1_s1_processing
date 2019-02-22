@@ -31,9 +31,8 @@ defdict = {
     'omega' : [True, 0.3,  None,  ([0.05], [0.6])],
     }
 
-defdict['SM'] = [True, 0.1, 'D', ([0.01], [0.2])]
-defdict['v'] = [True, .2, None, ([0.01], [.5])]
-defdict['v2'] = [False, 1.]
+#defdict['v'] = [True, .2, None, ([0.01], [.5])]
+#defdict['v2'] = [False, 1.]
 #defdict['VOD'] = [True, .25, None, ([0.01], [1.])]
 
 
@@ -42,7 +41,7 @@ fitset = {'int_Q': False,
           '_fnevals_input': None,
           # 'verbosity' : 1, # verbosity of monofit
           # ------------ least_squares kwargs: ----------------
-          'verbose': 2,  # verbosity of least_squares
+          'verbose': 0,  # verbosity of least_squares
           'ftol': 1.e-5,
           'gtol': 1.e-5,
           'xtol': 1.e-5,

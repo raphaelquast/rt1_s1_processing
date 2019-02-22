@@ -97,8 +97,6 @@ def inpdata_inc_average(inpdata, round_digits=0, returnall = False):
         return inpdata_new
 
 
-
-
 def get_worker_id():
     '''
     return multiprocessing worker ID
@@ -120,6 +118,7 @@ def prepare_index_array(time_list, data_array):
         idx = time_list.index(time)
         px_time[idx] = time
     return px_time
+
 
 def make_tmp_dir(sub_folder_name):
     '''
@@ -329,15 +328,14 @@ def parallelfunc(import_dict):
         c = import_dict['c']
         r = import_dict['r']
         outdir = import_dict['outdir']
-
         # get the sig0 dataset
         dataset = import_dict['dataset']
         # convert it to linear units
         dataset['sig'] = 10 ** (dataset['sig'] / 10.)
 
-        #dataset.index = [pd.to_datetime(i.date()) for i in dataset.index]
+        dataset.index = [pd.to_datetime(i.date()) for i in dataset.index]
 
-        dataset = inpdata_inc_average(dataset)
+        #dataset = inpdata_inc_average(dataset)
 
 
         df_ndvi = import_dict['df_ndvi']
@@ -387,7 +385,7 @@ def parallelfunc(import_dict):
 
     # get the ids
     # TODO replace this with the id from import_dict!
-    site_id = import_dict['r']
+    site_id =  f"{import_dict['c']}_{import_dict['r']}"
 
     # extract parameters for csv-output
     # get the keys of the constant parameters
@@ -399,7 +397,7 @@ def parallelfunc(import_dict):
     csv_timeseries = pd.DataFrame({key : val for key, val in fit.result[6].items() if key in tskeys}, index=fit.index)
 
     # generate csv-files
-    csv_folder_path = os.path.join(outdir, 'csv_output' + str(c))
+    csv_folder_path = os.path.join(outdir, 'csv_output')
     # generate csv_output folder if it does not exist
     if not os.path.exists(csv_folder_path):
         os.mkdir(csv_folder_path)
