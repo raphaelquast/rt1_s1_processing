@@ -343,10 +343,12 @@ def main(args, test_vsc_param=False):
 def read_data_mp(process_dict):
     read_data(sig0_dir=process_dict['sig0_dir'],
               plia_dir=process_dict['plia_dir'],
-              feature_list=process_dict['line'],
+              feature_list= process_dict['feature_list'],
               output_dir=process_dict['output_dir'],
               ndvi_dir=process_dict['ndvi_dir'],
-              orbit_direction=process_dict['orbit_direction'])
+              orbit_direction=process_dict['orbit_direction'],
+              ref_image=process_dict['ref_image'],
+              shp_file_base=process_dict['shp_file_base'])
 
 
 if __name__ == '__main__':
